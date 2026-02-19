@@ -105,7 +105,7 @@ namespace MemoryGame
             }
 
             _pool = new ObjectPool<CardController>(cardPrefab, boardRoot, prewarm: 0);
-            _board = new BoardController(boardRoot, config, cardSet, _pool, frame);
+            _board = new BoardController(boardRoot, cardSet, _pool, frame);
 
             _levelIndex = progress ? progress.GetCurrentLevelIndex() : 0;
 

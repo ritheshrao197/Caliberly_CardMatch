@@ -12,18 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7366fe81530a34bdc9dfe6d34ccc66b7, type: 3}
   m_Name: GameConfig
   m_EditorClassIdentifier: 
-  DefaultRows: 3
-  DefaultCols: 4
+  DefaultRows: 2
+  DefaultCols: 2
   DefaultFlipDuration: 0.25
   DefaultMismatchHideDelay: 0.7
-  DefaultCellX: 1.3
-  DefaultCellY: 1.6
-  InnerPadding: 0.05
-  CardPadding: 0.1
-  CellSpacingX: 1.3
-  CellSpacingY: 1.6
+  DefaultCellX: 1
+  DefaultCellY: 1
+  InnerPadding: 0
+  CardPadding: 0
+  CellSpacingX: 5
+  CellSpacingY: 7
   FlipDuration: 0.25
-  MinFlipScale: 0.0001
-  HalfMinFlipScale: 0.00005
+  MinFlipScale: 0.2
+  HalfMinFlipScale: 0.1
   mismatchHideDelay: 0.1
   tinyBufferDelay: 0.05
+  DefaultTargetWidth: 2
+  DefaultTargetHeight: 2
+  DefaultPreserveAspect: 1

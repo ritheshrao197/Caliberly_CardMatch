@@ -1,18 +1,15 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using MemoryGame;
 using MemoryGame.Config;
 using MemoryGame.Events;
-using UnityEngine;
 using MemoryGame.Constants;
-using System.Linq;
+using UnityEngine;
 using UnityEngine.Pool;
 
 namespace MemoryGame.Controller
 {
-    /// <summary>
-    /// Controller responsible for building and managing the game board.
-    /// Handles card placement, layout, and board configuration.
-    /// </summary>
     public class BoardController
     {
         private readonly Transform _root;
@@ -20,154 +17,152 @@ namespace MemoryGame.Controller
         private readonly ObjectPool<CardController> _pool;
         private readonly BoardFrame _frame;
 
-
-        /// <summary>
-        /// List of all card controllers on the board
-        /// </summary>
         public List<CardController> Cards { get; } = new List<CardController>();
 
-
-
-        /// <summary>
-        /// Constructor for the BoardController
-        /// </summary>
-        /// <param name="root">Transform to parent all cards under</param>
-        /// <param name="cfg">Game configuration settings</param>
-        /// <param name="set">Card set containing available card faces</param>
-        /// <param name="pool">Object pool for card controllers</param>
-        /// <param name="frame">Optional board frame for layout constraints</param>
-        /// <param name="eventBus">Event bus for publishing events</param>
-        public BoardController(Transform root, CardSet set, ObjectPool<CardController> pool, BoardFrame frame)
+        public BoardController(
+            Transform root,
+            CardSet set,
+            ObjectPool<CardController> pool,
+            BoardFrame frame)
         {
-            _root = root; _set = set; _pool = pool; _frame = frame;
+            _root = root ?? throw new ArgumentNullException(nameof(root));
+            _set = set ?? throw new ArgumentNullException(nameof(set));
+            _pool = pool ?? throw new ArgumentNullException(nameof(pool));
+            _frame = frame;
         }
 
-        /// <summary>
-        /// Build or rebuild the board using only the required number of cards.
-        /// Reuses already-instantiated cards when possible, and returns extras to the pool.
-        /// </summary>
-        /// <param name="rows">Number of rows in the board grid</param>
-        /// <param name="cols">Number of columns in the board grid</param>
         public void Build(int rows, int cols)
         {
+            if (rows <= 0 || cols <= 0)
+                throw new ArgumentException("Rows and columns must be greater than 0.");
+
             int totalSlots = rows * cols;
-            int usable = (totalSlots / 2) * 2; // enforce even count
+            int usable = (totalSlots / 2) * 2;
             int pairs = usable / 2;
 
             if (usable != totalSlots)
             {
-                Debug.LogWarning($"[BoardController] Odd grid detected ({rows}x{cols}={totalSlots}). Using {usable} cards (pairs={pairs}) and leaving {totalSlots - usable} empty slot(s).");
+                Debug.LogWarning(
+                    $"[BoardController] Odd grid {rows}x{cols}. Using {usable} cards.");
             }
 
-            // Prepare ids
             var ids = PickIds(pairs);
             Shuffle(ids);
 
-            // Pool sizing
-            while (Cards.Count < usable)
+            ResizePool(usable);
+
+            if (_frame != null)
+            {
+                float frameScale = CalculateFrameScale(rows, cols);
+                _frame.transform.localScale = Vector3.one * frameScale;
+
+                if (_frame.HasBounds(out var inner))
+                {
+                    LayoutInsideRect(inner, rows, cols, ids);
+                }
+                else
+                {
+                    Debug.LogWarning("Frame exists but bounds invalid. Falling back.");
+                    UseSimpleLayout(rows, cols, usable, ids);
+                }
+            }
+            else
+            {
+                UseSimpleLayout(rows, cols, usable, ids);
+            }
+
+
+            EventBus.Instance.Publish(new BoardBuiltEvent(pairs));
+        }
+
+        private void UseSimpleLayout(int rows, int cols, int usable, List<string> ids)
+        {
+            Debug.LogWarning("[BoardController] No frame bounds found. Using simple grid layout.");
+            float scale = CalculateCardScale(rows, cols);
+
+            for (int i = 0; i < usable; i++)
+            {
+                var card = Cards[i];
+
+                card.transform.localPosition =
+                    IndexToLocal(i, rows, cols,
+                    BoardConstants.DefaultCellX,
+                    BoardConstants.DefaultCellY);
+
+                card.transform.localScale = Vector3.one * scale;
+
+                InitCard(card, ids[i]);
+            }
+        }
+
+        private void ResizePool(int required)
+        {
+            while (Cards.Count < required)
             {
                 var card = _pool.Get();
                 card.transform.SetParent(_root, false);
                 Cards.Add(card);
             }
-            if (Cards.Count > usable)
-            {
-                for (int i = Cards.Count - 1; i >= usable; i--)
-                {
-                    _pool.Release(Cards[i]);
-                    Cards.RemoveAt(i);
-                }
-            }
 
-            if (_frame != null && _frame.HasBounds(out var inner))
+            while (Cards.Count > required)
             {
-                LayoutInsideRect(inner, rows, cols, ids);
-
+                var card = Cards[Cards.Count - 1];
+                _pool.Release(card);
+                Cards.RemoveAt(Cards.Count - 1);
             }
-            else
-            {
-                float scale = CalculateCardScale(rows, cols);
-                for (int i = 0; i < usable; i++)
-                {
-                    var card = Cards[i];
-                    var pos = IndexToLocal(i, rows, cols, BoardConstants.DefaultCellX, BoardConstants.DefaultCellY);
-                    card.transform.localPosition = pos;
-                    card.transform.localScale = Vector3.one * scale;
-
-                    var id = ids[i];
-                    var face = _set.GetFaceById(id);
-                    card.Init(id, face, startFaceUp: false);
-                    card.flipDuration = BoardConstants.DefaultFlipDuration;
-                }
-            }
-            if (_frame != null)
-            {
-                float scale = CalculateFramecale(rows,cols);
-                _frame.transform.localScale = Vector3.one * scale;
-                Debug.Log($"[BoardController] Layout with BoardFrame at scale {scale:F2}");
-            }
-            EventBus.Instance.Publish(new BoardBuiltEvent(pairs));
         }
 
-        /// <summary>
-        /// Layout cards within a defined rectangular area
-        /// </summary>
-        /// <param name="innerWorld">The rectangular area to layout cards within</param>
-        /// <param name="rows">Number of rows in the grid</param>
-        /// <param name="cols">Number of columns in the grid</param>
-        /// <param name="ids">List of card IDs to assign</param>
-        private void LayoutInsideRect(Rect innerWorld, int rows, int cols, List<string> ids)
+        private void LayoutInsideRect(
+            Rect innerWorld,
+            int rows,
+            int cols,
+            List<string> ids)
         {
-            int totalSlots = rows * cols;
-            int usable = (totalSlots & 1) == 1 ? totalSlots - 1 : totalSlots; // ensure even
-
-            // Cell size from inner rect
             float cellW = innerWorld.width / cols;
             float cellH = innerWorld.height / rows;
 
-            // Dynamic extra padding for tighter grids (prevents edge bleed in 5×5+)
-            // Effective padding = boardFrame.cardPadding + a small grid-based term
-            float gridPad = Mathf.Clamp01(BoardConstants.GridPaddingFactor * Mathf.Max(rows, cols));   // ~0.06 at 5x5
-            float pad = Mathf.Clamp01((_frame != null ? BoardConstants.DefaultCardPadding : BoardConstants.DefaultPadding) + gridPad);
+            float gridPad =
+                Mathf.Clamp01(BoardConstants.GridPaddingFactor *
+                              Mathf.Max(rows, cols));
+
+            float pad =
+                Mathf.Clamp01(BoardConstants.DefaultCardPadding + gridPad);
 
             float boxW = cellW * (1f - pad);
             float boxH = cellH * (1f - pad);
 
-            for (int i = 0; i < usable; i++)
+            for (int i = 0; i < Cards.Count; i++)
             {
                 int r = i / cols;
                 int c = i % cols;
 
-                // Center of each cell in world space
                 float cx = innerWorld.xMin + (c + 0.5f) * cellW;
                 float cy = innerWorld.yMax - (r + 0.5f) * cellH;
-                Vector3 worldPos = new Vector3(cx, cy, 0f);
-                Vector3 localPos = _root.InverseTransformPoint(worldPos);
+
+                Vector3 world = new Vector3(cx, cy, 0f);
+                Vector3 local = _root.InverseTransformPoint(world);
 
                 var card = Cards[i];
-                card.transform.localPosition = localPos;
+                card.transform.localPosition = local;
 
-                // Make sure child renderers are at scale 1 to avoid double scaling
                 card.view?.NormalizeChildScale();
 
-                // Measure natural size at scale 1 (see helper below)
-                Vector2 nat = GetCardNaturalSize(card);
-                float scale = Mathf.Min(boxW / nat.x, boxH / nat.y);
+                Vector2 natural = GetCardNaturalSize(card);
+                float scale = Mathf.Min(boxW / natural.x, boxH / natural.y);
+
                 card.transform.localScale = Vector3.one * scale;
 
-                // Init content
-                var id = ids[i];
-                var face = _set.GetFaceById(id);
-                card.Init(id, face, false);
-                card.flipDuration = BoardConstants.DefaultFlipDuration;
+                InitCard(card, ids[i]);
             }
         }
 
-        /// <summary>
-        /// Gets the natural size of a card at scale 1
-        /// </summary>
-        /// <param name="card">The card controller to measure</param>
-        /// <returns>The natural size of the card</returns>
+        private void InitCard(CardController card, string id)
+        {
+            var face = _set.GetFaceById(id);
+            card.Init(id, face, false);
+            card.flipDuration = BoardConstants.DefaultFlipDuration;
+        }
+
         private Vector2 GetCardNaturalSize(CardController card)
         {
             var view = card.view;
@@ -175,149 +170,116 @@ namespace MemoryGame.Controller
             {
                 if (view.back && view.back.sprite)
                 {
-                    // sprite.bounds.size is in local sprite units; multiply by child localScale if not 1
                     var s = view.back.sprite.bounds.size;
-                    var ls = view.back.transform.localScale;
-                    return new Vector2(s.x * ls.x, s.y * ls.y);
+                    return new Vector2(s.x, s.y);
                 }
+
                 if (view.face && view.face.sprite)
                 {
                     var s = view.face.sprite.bounds.size;
-                    var ls = view.face.transform.localScale;
-                    return new Vector2(s.x * ls.x, s.y * ls.y);
+                    return new Vector2(s.x, s.y);
                 }
             }
-            // conservative default aspect (taller than wide)
-            return new Vector2(BoardConstants.DefaultCardWidth, BoardConstants.DefaultCardHeight);
+
+            return new Vector2(
+                BoardConstants.DefaultCardWidth,
+                BoardConstants.DefaultCardHeight);
         }
 
-        /// <summary>
-        /// Clears all cards from the board and returns them to the pool
-        /// </summary>
-        public void ClearAll()
-        {
-            for (int i = 0; i < Cards.Count; i++)
-            {
-                _pool.Release(Cards[i]);
-            }
-            Cards.Clear();
-        }
-
-        /// <summary>
-        /// Picks a specified number of unique card IDs from the available set
-        /// </summary>
-        /// <param name="pairCount">Number of pairs (unique IDs) to pick</param>
-        /// <returns>List of IDs, with each ID appearing twice for pairing</returns>
         private List<string> PickIds(int pairCount)
         {
-            // FIX: Use Distinct() to ensure the source list contains only truly unique IDs.
-            // If _set.GetAllIds() accidentally returned duplicates (e.g., from multiple sources),
-            // this prevents those duplicates from being considered for the 'unique' list.
-            var uniqueSource = _set.GetAllIds().Distinct().ToList();
+            var source = _set.GetAllIds().Distinct().ToList();
 
-            // 1. Pick the unique IDs
-            var unique = new List<string>();
+            if (pairCount > source.Count)
+                throw new InvalidOperationException(
+                    "Not enough unique card IDs to build board.");
 
-            // Shuffle the unique source list before picking
-            Shuffle(uniqueSource);
+            Shuffle(source);
 
-            // Pick the required number of pairs (unique IDs)
-            for (int i = 0; i < pairCount && i < uniqueSource.Count; i++)
-                unique.Add(uniqueSource[i]);
+            var result = new List<string>(pairCount * 2);
 
-            // 2. Create the final list by adding each unique ID twice
-            var list = new List<string>(pairCount * 2);
-            foreach (var id in unique)
+            for (int i = 0; i < pairCount; i++)
             {
-                list.Add(id); list.Add(id);
+                result.Add(source[i]);
+                result.Add(source[i]);
             }
 
-            Debug.Log($"[BoardController] Final Board IDs (pre-shuffle): {string.Join(", ", list)}");
-
-            return list;
+            return result;
         }
 
-        /// <summary>
-        /// Calculates an appropriate scale for cards based on grid dimensions
-        /// </summary>
-        /// <param name="rows">Number of rows in the grid</param>
-        /// <param name="cols">Number of columns in the grid</param>
-        /// <returns>Scale factor for cards</returns>
         private float CalculateCardScale(int rows, int cols)
         {
-            // Base reference: 4x4 grid = scale 1.0, shrink when more cells
             int maxDim = Mathf.Max(rows, cols);
             return Mathf.Clamp(4f / maxDim, 0.4f, 1f);
         }
 
-        /// <summary>
-        /// Converts a linear index to a local position in the grid
-        /// </summary>
-        /// <param name="index">Linear index of the card</param>
-        /// <param name="rows">Number of rows in the grid</param>
-        /// <param name="cols">Number of columns in the grid</param>
-        /// <param name="dx">Horizontal spacing between cards</param>
-        /// <param name="dy">Vertical spacing between cards</param>
-        /// <returns>Local position for the card</returns>
-        private static Vector3 IndexToLocal(int index, int rows, int cols, float dx, float dy)
+        private float CalculateFrameScale(int rows, int cols)
+        {
+            int maxDim = rows;
+
+            if (maxDim <= 0)
+                return 5f;
+
+            // // Make 2x2 and 3x3 intentionally larger
+            // if (maxDim <= 2)
+            //     return 3f;   // Big and satisfying
+
+            // if (maxDim == 3)
+            //     return 2f;
+
+            // if (maxDim == 4)
+            //     return 1.5f;
+
+            // if (maxDim == 5)
+            //     return 1.5f;
+
+            // if (maxDim == 6)
+            //     return 1f;
+
+            float raw =
+                BoardConstants.CardScaleNumerator /
+                (maxDim + BoardConstants.CardScaleDivisorOffset);
+
+            return Mathf.Clamp(
+                raw,
+                BoardConstants.MinCardScale,
+                BoardConstants.MaxCardScale);
+        }
+
+        public void ClearAll()
+        {
+            foreach (var card in Cards)
+                _pool.Release(card);
+
+            Cards.Clear();
+        }
+
+        private static Vector3 IndexToLocal(
+            int index,
+            int rows,
+            int cols,
+            float dx,
+            float dy)
         {
             int r = index / cols;
             int c = index % cols;
+
             float width = (cols - 1) * dx;
             float height = (rows - 1) * dy;
+
             float x = -width * 0.5f + c * dx;
             float y = height * 0.5f - r * dy;
+
             return new Vector3(x, y, 0);
         }
 
-        /// <summary>
-        /// Shuffles a list in place using the Fisher-Yates shuffle algorithm
-        /// </summary>
-        /// <typeparam name="T">Type of elements in the list</typeparam>
-        /// <param name="list">List to shuffle</param>
         private static void Shuffle<T>(IList<T> list)
         {
             for (int i = list.Count - 1; i > 0; i--)
             {
-                int j = Random.Range(0, i + 1);
+                int j = UnityEngine.Random.Range(0, i + 1);
                 (list[i], list[j]) = (list[j], list[i]);
             }
         }
-        /// <summary>
-        /// Calculates an appropriate scale for cards based on grid dimensions using a dynamic formula.
-        /// This formula is designed to approximate the requested scaling factors (1.7 for 2x2, 0.85 for 4x4, 0.55 for 7x7)
-        /// while ensuring smooth scaling for all other grid sizes.
-        /// </summary>
-        /// <param name="rows">Number of rows in the grid</param>
-        /// <param name="cols">Number of columns in the grid</param>
-        /// <returns>Scale factor for cards</returns>
-        private float CalculateFramecale(int rowCount)
-        {
-
-            // Safety check: Avoid division by zero, though unlikely with grid dimensions
-            if (rowCount < 1)
-            {
-                return 1.0f;
-            }
-
-            // Formula: S = 3.4 / (D + 0.1)
-            // This formula is specifically tuned to hit the requested scale points:
-            // D=2  -> 3.4 / 2.1  ~ 1.61 (Close to 1.7)
-            // D=4  -> 3.4 / 4.1  ~ 0.83 (Close to 0.85)
-            // D=7  -> 3.4 / 7.1  ~ 0.48 (Close to 0.55)
-
-            // To hit 1.7 more accurately for small grids, we can adjust the numerator slightly:
-            // Let's use 3.5 / (D + 0.1) for better small-grid fit and clamp it.
-
-            // The divisor offset (0.1) prevents the scale from growing too fast for small dimensions.
-            float calculatedScale = BoardConstants.CardScaleNumerator / (rowCount + BoardConstants.CardScaleDivisorOffset);
-
-            // Clamp the scale to a sensible range to prevent cards from becoming too large or too small.
-            // Max scale limit (e.g., 2.0) prevents huge cards on a 1x1 grid.
-            // Min scale limit (e.g., 0.2) ensures visibility on very large grids (e.g., 20x20).
-            return Mathf.Clamp(calculatedScale, BoardConstants.MinCardScale, BoardConstants.MaxCardScale);
-        }
     }
-
-
 }

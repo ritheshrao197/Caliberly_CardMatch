@@ -19,7 +19,7 @@ namespace MemoryGame.Constants
         /// <summary>
         /// Numerator used in the card scale calculation formula
         /// </summary>
-        public const float CardScaleNumerator = 3.5f;
+        public const float CardScaleNumerator = 5.5f;
 
         /// <summary>
         /// Divisor offset used in the card scale calculation formula
@@ -49,7 +49,7 @@ namespace MemoryGame.Constants
         /// <summary>
         /// Conservative default height for cards when no sprite is available
         /// </summary>
-        public const float DefaultCardHeight = 1.4f;
+        public const float DefaultCardHeight = 1f;
 
         /// <summary>
         /// Default inner padding as a fraction of frame size
