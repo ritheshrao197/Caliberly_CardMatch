@@ -19,17 +19,7 @@ namespace MemoryGame.Controller
         public SpriteRenderer frame;
         [SerializeField] GameConfig _cfg;
 
-        /// <summary>
-        /// Padding (as a fraction of frame size) between the frame edge and the playable area.
-        /// </summary>
-        [Range(0, 0.5f)] 
-        public float innerPadding = 0.05f;
-
-        /// <summary>
-        /// Padding (as a fraction of frame size) between cards inside the frame.
-        /// </summary>
-        [Range(0, 0.5f)] 
-        public float cardPadding = 0.02f;
+        // 
 
         /// <summary>
         /// Automatically assigns the SpriteRenderer on this GameObject if not set.
@@ -48,8 +38,8 @@ namespace MemoryGame.Controller
             var sr = frame == null ? GetComponent<SpriteRenderer>() : frame;
             if (sr == null || sr.sprite == null) { inner = default; return false; }
             var b = sr.bounds;
-            float padX = innerPadding * b.size.x;
-            float padY = innerPadding * b.size.y;
+            float padX =BoardConstants.DefaultInnerPadding  * b.size.x;
+            float padY = BoardConstants.DefaultInnerPadding * b.size.y;
             inner = new Rect(b.min.x + padX, b.min.y + padY, b.size.x - 2f * padX, b.size.y - 2f * padY);
             return true;
         }

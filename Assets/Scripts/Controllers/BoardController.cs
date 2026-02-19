@@ -16,12 +16,10 @@ namespace MemoryGame.Controller
     public class BoardController
     {
         private readonly Transform _root;
-        private readonly GameConfig _cfg;
         private readonly CardSet _set;
         private readonly ObjectPool<CardController> _pool;
-        private readonly BoardFrame _frame; 
+        private readonly BoardFrame _frame;
 
-        private readonly BoardSettings _settings = new BoardSettings();
 
         /// <summary>
         /// List of all card controllers on the board
@@ -39,10 +37,9 @@ namespace MemoryGame.Controller
         /// <param name="pool">Object pool for card controllers</param>
         /// <param name="frame">Optional board frame for layout constraints</param>
         /// <param name="eventBus">Event bus for publishing events</param>
-        public BoardController(Transform root, GameConfig cfg, CardSet set, ObjectPool<CardController> pool, BoardFrame frame,BoardSettings settings)
+        public BoardController(Transform root, CardSet set, ObjectPool<CardController> pool, BoardFrame frame)
         {
-            _root = root; _cfg = cfg; _set = set; _pool = pool; _frame = frame;
-            _settings = settings;
+            _root = root; _set = set; _pool = pool; _frame = frame;
         }
 
         /// <summary>
@@ -93,19 +90,19 @@ namespace MemoryGame.Controller
                 for (int i = 0; i < usable; i++)
                 {
                     var card = Cards[i];
-                    var pos = IndexToLocal(i, rows, cols, _cfg.DefaultCellX, _cfg.DefaultCellY);
+                    var pos = IndexToLocal(i, rows, cols, BoardConstants.DefaultCellX, BoardConstants.DefaultCellY);
                     card.transform.localPosition = pos;
                     card.transform.localScale = Vector3.one * scale;
 
                     var id = ids[i];
                     var face = _set.GetFaceById(id);
                     card.Init(id, face, startFaceUp: false);
-                    card.flipDuration = _cfg.FlipDuration;
+                    card.flipDuration = BoardConstants.DefaultFlipDuration;
                 }
             }
-            if (_frame)
+            if (_frame != null)
             {
-                float scale = CalculateFramecale(rows);
+                float scale = CalculateFramecale(rows,cols);
                 _frame.transform.localScale = Vector3.one * scale;
                 Debug.Log($"[BoardController] Layout with BoardFrame at scale {scale:F2}");
             }
@@ -130,8 +127,8 @@ namespace MemoryGame.Controller
 
             // Dynamic extra padding for tighter grids (prevents edge bleed in 5×5+)
             // Effective padding = boardFrame.cardPadding + a small grid-based term
-            float gridPad = Mathf.Clamp01(_settings.GridPaddingFactor * Mathf.Max(rows, cols));   // ~0.06 at 5x5
-            float pad = Mathf.Clamp01((_frame != null ? _frame.cardPadding : _settings.DefaultPadding) + gridPad);
+            float gridPad = Mathf.Clamp01(BoardConstants.GridPaddingFactor * Mathf.Max(rows, cols));   // ~0.06 at 5x5
+            float pad = Mathf.Clamp01((_frame != null ? BoardConstants.DefaultCardPadding : BoardConstants.DefaultPadding) + gridPad);
 
             float boxW = cellW * (1f - pad);
             float boxH = cellH * (1f - pad);
@@ -162,7 +159,7 @@ namespace MemoryGame.Controller
                 var id = ids[i];
                 var face = _set.GetFaceById(id);
                 card.Init(id, face, false);
-                card.flipDuration = _cfg.FlipDuration;
+                card.flipDuration = BoardConstants.DefaultFlipDuration;
             }
         }
 
@@ -171,7 +168,7 @@ namespace MemoryGame.Controller
         /// </summary>
         /// <param name="card">The card controller to measure</param>
         /// <returns>The natural size of the card</returns>
-        private  Vector2 GetCardNaturalSize(CardController card)
+        private Vector2 GetCardNaturalSize(CardController card)
         {
             var view = card.view;
             if (view != null)
@@ -191,7 +188,7 @@ namespace MemoryGame.Controller
                 }
             }
             // conservative default aspect (taller than wide)
-            return new Vector2(_settings.DefaultCardWidth, _settings.DefaultCardHeight);
+            return new Vector2(BoardConstants.DefaultCardWidth, BoardConstants.DefaultCardHeight);
         }
 
         /// <summary>
@@ -313,14 +310,14 @@ namespace MemoryGame.Controller
             // Let's use 3.5 / (D + 0.1) for better small-grid fit and clamp it.
 
             // The divisor offset (0.1) prevents the scale from growing too fast for small dimensions.
-            float calculatedScale = _settings.CardScaleNumerator / (rowCount + _settings.CardScaleDivisorOffset);
+            float calculatedScale = BoardConstants.CardScaleNumerator / (rowCount + BoardConstants.CardScaleDivisorOffset);
 
             // Clamp the scale to a sensible range to prevent cards from becoming too large or too small.
             // Max scale limit (e.g., 2.0) prevents huge cards on a 1x1 grid.
             // Min scale limit (e.g., 0.2) ensures visibility on very large grids (e.g., 20x20).
-            return Mathf.Clamp(calculatedScale, _settings.MinCardScale, _settings.MaxCardScale);
+            return Mathf.Clamp(calculatedScale, BoardConstants.MinCardScale, BoardConstants.MaxCardScale);
         }
     }
 
-    
+
 }

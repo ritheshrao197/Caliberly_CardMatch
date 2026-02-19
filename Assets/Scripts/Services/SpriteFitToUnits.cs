@@ -32,23 +32,22 @@ namespace MemoryGame
         /// </summary>
         public FitMode mode = FitMode.FitInside;
 
-        public GameConfig config;
 
         /// <summary>
         /// Target width in world units
         /// </summary>
         [Header("Target size in world units")]
-        public float targetWidth;
+        public float targetWidth = 2f;
         /// <summary>
         /// Target height in world units
         /// </summary>
-        public float targetHeight;
+        public float targetHeight = 2f;
 
         /// <summary>
         /// Whether to preserve the sprite's original aspect ratio
         /// </summary>
         [Header("Options")]
-        public bool preserveAspect ;
+        public bool preserveAspect = true;
 
         SpriteRenderer _sr;
 
@@ -57,9 +56,8 @@ namespace MemoryGame
         /// </summary>
         void OnEnable() { 
             _sr = GetComponent<SpriteRenderer>();
-            // targetWidth = config.DefaultTargetWidth;
-            // targetHeight = config.DefaultTargetHeight;
-            // preserveAspect = config.DefaultPreserveAspect;
+           
+           
              Apply();
              }
         

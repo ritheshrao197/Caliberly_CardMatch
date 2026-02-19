@@ -98,7 +98,7 @@ namespace MemoryGame.Services
             _busy = true;
             SetAllInput(false);
 
-            yield return new WaitForSeconds(config.tinyBufferDelay); // tiny buffer
+            yield return new WaitForSeconds(BoardConstants.ResolveBufferDelay); // tiny buffer
 
             // Check if the two selected cards match
             if (_first.Model.Id == _second.Model.Id)
@@ -120,7 +120,7 @@ namespace MemoryGame.Services
             {
                 // Cards don't match - notify listeners and flip them back
                 EventBus.Instance.Publish(new PairMismatchedEvent(_first, _second));
-                yield return new WaitForSeconds(Mathf.Max(0f, config != null ? config.mismatchHideDelay : config.DefaultMismatchHideDelay));
+                yield return new WaitForSeconds(Mathf.Max(0f, config != null ? config.mismatchHideDelay : BoardConstants.DefaultMismatchHideDelay));
                 // Flip back
                 yield return _first.StartCoroutine(_first.FlipRoutine(false));
                 yield return _second.StartCoroutine(_second.FlipRoutine(false));
