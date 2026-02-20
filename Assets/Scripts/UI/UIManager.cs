@@ -19,8 +19,6 @@ namespace MemoryGame.Views
         [Header("Panels")]
         [SerializeField] private List<UIPanel> panels = new List<UIPanel>();
 
-        [Header("Popup Canvas")]
-        [SerializeField] private GameObject popupCanvasRoot;
 
         [Header("Named Panels")]
         [SerializeField] private PanelType homePanelName = PanelType.Home;
@@ -31,7 +29,6 @@ namespace MemoryGame.Views
 
         private readonly Dictionary<PanelType, UIPanel> panelDictionary = new Dictionary<PanelType, UIPanel>();
         private EventBus _bus;
-        private int _activePopupCount;
 
         private void Awake()
         {
@@ -98,7 +95,6 @@ namespace MemoryGame.Views
         private void InitializePanels()
         {
             panelDictionary.Clear();
-            _activePopupCount = 0;
 
             if (panels == null || panels.Count == 0)
             {
@@ -135,7 +131,7 @@ namespace MemoryGame.Views
 
         public bool IsPanelOpen(PanelType panelType)
         {
-            return panelDictionary.TryGetValue(panelType, out UIPanel panel) && panel.gameObject.activeSelf;
+            return panelDictionary.TryGetValue(panelType, out UIPanel panel) && panel.IsVisible;
         }
 
         private void SetMainState(MainState state)
@@ -151,9 +147,8 @@ namespace MemoryGame.Views
                 ClosePanel(homePanelName);
             }
 
-            CloseAllPopups(false);
+            CloseAllPopups();
 
-            RefreshPopupCanvas();
         }
 
         // ------------------------
@@ -224,16 +219,14 @@ namespace MemoryGame.Views
         {
             SetPanelVisible(pausePopupName, false);
             InputLock.Unlock();
-            RefreshPopupCanvas();
         }
 
         private void ShowPopup(PanelType panelType)
         {
             SetPanelVisible(panelType, true);
-            RefreshPopupCanvas();
         }
 
-        private void CloseAllPopups(bool refresh = true)
+        private void CloseAllPopups()
         {
             bool pauseWasOpen = IsPanelOpen(pausePopupName);
 
@@ -245,17 +238,9 @@ namespace MemoryGame.Views
             if (pauseWasOpen)
                 InputLock.Unlock();
 
-            if (refresh)
-                RefreshPopupCanvas();
         }
 
-        private void RefreshPopupCanvas()
-        {
-            if (popupCanvasRoot == null)
-                return;
-
-            popupCanvasRoot.SetActive(_activePopupCount > 0);
-        }
+       
 
         private bool TryGetPanel(PanelType panelType, out UIPanel panel)
         {
@@ -271,21 +256,14 @@ namespace MemoryGame.Views
             if (!TryGetPanel(panelType, out UIPanel panel))
                 return;
 
-            bool isActive = panel.gameObject.activeSelf;
-            if (isActive == visible)
+            bool isVisible = panel.IsVisible;
+            if (!visible && !isVisible)
                 return;
 
             if (visible)
                 panel.Show();
             else
                 panel.Hide();
-
-            if (IsPopupPanel(panelType))
-            {
-                _activePopupCount += visible ? 1 : -1;
-                if (_activePopupCount < 0)
-                    _activePopupCount = 0;
-            }
         }
 
         private static bool IsPopupPanel(PanelType panelType)

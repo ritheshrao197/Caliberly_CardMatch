@@ -43,6 +43,7 @@ namespace MemoryGame
         public void ResetProgress()
         {
             PlayerPrefs.DeleteKey(KEY);
+            PlayerPrefs.Save();
         }
     }
 }

@@ -184,14 +184,14 @@ namespace MemoryGame.Controller
         private void ToggleSfx()
         {
             _sfxEnabled = !_sfxEnabled;
-            // PlayerPrefs.SetInt(KEY_SFX, _sfxEnabled ? 1 : 0);
+            PlayerPrefs.SetInt(KEY_SFX, _sfxEnabled ? 1 : 0);
             EventBus.Instance.Publish(new ToggleSfxEvent(_sfxEnabled));
         }
 
         private void ToggleMusic()
         {
             _musicEnabled = !_musicEnabled;
-            // PlayerPrefs.SetInt(KEY_MUSIC, _musicEnabled ? 1 : 0);
+            PlayerPrefs.SetInt(KEY_MUSIC, _musicEnabled ? 1 : 0);
 
             if (_musicEnabled)
             {

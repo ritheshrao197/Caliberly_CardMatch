@@ -45,6 +45,12 @@ namespace MemoryGame.Views
             if (closeButton) 
                 closeButton.onClick.AddListener(() => EventBus.Instance.Publish(new OnHideLevelSelectEvent()));
         }
+
+        public override void Show()
+        {
+            Rebuild();
+            base.Show();
+        }
         
         /// <summary>
         /// Cleans up button click listeners when the component is destroyed
@@ -59,6 +65,9 @@ namespace MemoryGame.Views
         /// </summary>
         public void Rebuild()
         {
+            if (!content)
+                return;
+
             for (int i = content.childCount - 1; i >= 0; i--) 
                 Destroy(content.GetChild(i).gameObject);
             Build();

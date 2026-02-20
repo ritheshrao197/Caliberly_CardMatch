@@ -23,9 +23,11 @@ namespace MemoryGame.Controller
         /// Duration of the card flip animation in seconds
         /// </summary>
         public float flipDuration ;
+        [SerializeField] private float postInitInputUnlockDelay = 0.2f;
 
         private readonly CardModel _model = new CardModel();
         private bool _inputEnabled = true;
+        private Coroutine _unlockRoutine;
 
         /// <summary>
         /// Public accessor for the card's data model
@@ -54,7 +56,11 @@ namespace MemoryGame.Controller
             }
             gameObject.SetActive(true);
             _inputEnabled = true;
-            InputLock.Unlock();
+
+            int lockRevision = InputLock.Lock();
+            if (_unlockRoutine != null)
+                StopCoroutine(_unlockRoutine);
+            _unlockRoutine = StartCoroutine(UnlockInputAfterDelay(lockRevision));
         }
 
         /// <summary>
@@ -99,6 +105,15 @@ namespace MemoryGame.Controller
         {
             view?.SetInstant(faceUp);
             if (faceUp) _model.FlipUp(); else _model.FlipDown();
+        }
+
+        private IEnumerator UnlockInputAfterDelay(int lockRevision)
+        {
+            if (postInitInputUnlockDelay > 0f)
+                yield return new WaitForSeconds(postInitInputUnlockDelay);
+
+            InputLock.UnlockIfRevision(lockRevision);
+            _unlockRoutine = null;
         }
     }
 }
