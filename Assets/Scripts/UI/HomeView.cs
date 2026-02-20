@@ -146,25 +146,5 @@ namespace MemoryGame.Views
             if (exitButton) 
                 exitButton.onClick.RemoveAllListeners();
         }
-        
-        /// <summary>
-        /// Updates the sound effects icon when the SFX enabled state changes
-        /// </summary>
-        /// <param name="enabled">True if SFX are enabled, false if disabled</param>
-        void OnSfxChanged(bool enabled)
-        {
-            if (sfxIcon) 
-                sfxIcon.sprite = enabled ? onSpriteSfx : offSpriteSfx;
-        }
-
-        /// <summary>
-        /// Updates the music icon when the music enabled state changes
-        /// </summary>
-        /// <param name="enabled">True if music is enabled, false if disabled</param>
-        void OnMusicChanged(bool enabled)
-        {
-            if (musicIcon) 
-                musicIcon.sprite = enabled ? onSpriteMusic : offSpriteMusic;
-        }
     }
 }

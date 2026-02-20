@@ -6,6 +6,9 @@ using UnityEngine;
 
 namespace MemoryGame.Views
 {
+    /// <summary>
+    /// Central coordinator for panel state transitions and popup flows.
+    /// </summary>
     public class UIManager : MonoBehaviour
     {
         public static UIManager Instance { get; private set; }
@@ -110,7 +113,6 @@ namespace MemoryGame.Views
 
                 if (panelDictionary.ContainsKey(panelType))
                 {
-                    Debug.LogWarning($"Duplicate panel type '{panelType}' found. Skipping duplicate.");
                     continue;
                 }
 
@@ -185,7 +187,6 @@ namespace MemoryGame.Views
             var rp = panel as ResultPopup;
             if (rp == null)
             {
-                Debug.LogWarning($"Panel '{resultPopupName}' is not a ResultPopup.");
                 return;
             }
 
@@ -247,7 +248,6 @@ namespace MemoryGame.Views
             if (panelDictionary.TryGetValue(panelType, out panel))
                 return true;
 
-            Debug.LogWarning($"Panel '{panelType}' not found.");
             return false;
         }
 
@@ -264,17 +264,6 @@ namespace MemoryGame.Views
                 panel.Show();
             else
                 panel.Hide();
-        }
-
-        private static bool IsPopupPanel(PanelType panelType)
-        {
-            for (int i = 0; i < PopupPanels.Length; i++)
-            {
-                if (PopupPanels[i] == panelType)
-                    return true;
-            }
-
-            return false;
         }
 
         private static PanelType ResolvePanelType(UIPanel panel)

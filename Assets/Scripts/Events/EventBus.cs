@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 namespace MemoryGame.Events
 {
-    using System;
-    using System.Collections.Generic;
-
+    /// <summary>
+    /// Lightweight in-process event bus for game-wide decoupled messaging.
+    /// </summary>
     public sealed class EventBus
     {
         private static EventBus _instance;
@@ -49,9 +49,11 @@ namespace MemoryGame.Events
             if (!_subscribers.TryGetValue(type, out var listeners))
                 return;
 
-            for (int i = 0; i < listeners.Count; i++)
+            // Snapshot prevents issues if a listener subscribes/unsubscribes during publish.
+            var snapshot = listeners.ToArray();
+            for (int i = 0; i < snapshot.Length; i++)
             {
-                ((Action<T>)listeners[i]).Invoke(evt);
+                ((Action<T>)snapshot[i]).Invoke(evt);
             }
         }
 

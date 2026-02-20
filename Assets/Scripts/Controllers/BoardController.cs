@@ -10,6 +10,9 @@ using UnityEngine.Pool;
 
 namespace MemoryGame.Controller
 {
+    /// <summary>
+    /// Builds and lays out card instances for each level configuration.
+    /// </summary>
     public class BoardController
     {
         private readonly Transform _root;
@@ -72,7 +75,6 @@ namespace MemoryGame.Controller
                 {
                     if (!_frameFallbackWarned)
                     {
-                        Debug.LogWarning("[BoardController] Frame bounds invalid. Using simple grid fallback.");
                         _frameFallbackWarned = true;
                     }
 
@@ -97,7 +99,6 @@ namespace MemoryGame.Controller
         {
             if (warnIfNoFrame && !_simpleLayoutWarned)
             {
-                Debug.LogWarning("[BoardController] No frame configured. Using simple grid layout.");
                 _simpleLayoutWarned = true;
             }
 

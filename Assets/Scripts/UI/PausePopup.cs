@@ -5,6 +5,9 @@ using UnityEngine.UI;
 
 namespace MemoryGame.Views
 {
+    /// <summary>
+    /// Pause popup view that publishes resume/restart/home commands.
+    /// </summary>
     public class PausePopup : UIPanel
     {
         [SerializeField] private Button resumeButton;

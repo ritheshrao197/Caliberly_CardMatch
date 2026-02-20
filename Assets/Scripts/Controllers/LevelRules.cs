@@ -16,7 +16,9 @@ namespace MemoryGame
         private float _timeLimit;
         private bool _ended;
         private TimerService _timer;
-
+        /// <summary>
+        /// Initializes level rules for a new level based on the provided level definition and timer service.
+        /// </summary>
         private void OnEnable()
         {
             EventBus.Instance.Subscribe<PairMatchedEvent>(OnPairEvent);
@@ -25,7 +27,9 @@ namespace MemoryGame
         }
 
 
-
+        /// <summary>
+        /// Unsubscribes from game events when the component is disabled to prevent memory leaks and unintended behavior.
+        /// </summary>
         private void OnDisable()
         {
             EventBus.Instance.Unsubscribe<PairMatchedEvent>(OnPairEvent);
@@ -47,7 +51,9 @@ namespace MemoryGame
             _ended = false;
             _timer = timer;
         }
-
+        /// <summary>
+        /// Handles pair match events to track move count and enforce move limits
+        /// </summary>
         private void Update()
         {
             if (_ended) return;

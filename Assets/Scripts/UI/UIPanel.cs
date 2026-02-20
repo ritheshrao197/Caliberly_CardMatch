@@ -4,6 +4,9 @@ using UnityEngine.UI;
 
 namespace MemoryGame.Views
 {
+    /// <summary>
+    /// Base UI panel with typed identity and reusable fade show/hide behavior.
+    /// </summary>
     [RequireComponent(typeof(CanvasGroup))]
     [RequireComponent(typeof(GraphicRaycaster))]
     public abstract class UIPanel : MonoBehaviour

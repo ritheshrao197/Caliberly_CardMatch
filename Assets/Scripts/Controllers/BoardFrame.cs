@@ -1,6 +1,5 @@
 using UnityEngine;
 using MemoryGame.Constants;
-using MemoryGame.Config;
 
 namespace MemoryGame.Controller
 {
@@ -17,7 +16,6 @@ namespace MemoryGame.Controller
         /// </summary>
         [Tooltip("Optional explicit reference; defaults to SpriteRenderer on this GameObject")]
         public SpriteRenderer frame;
-        [SerializeField] GameConfig _cfg;
         private bool _missingSpriteWarned;
 
         // 
@@ -41,8 +39,6 @@ namespace MemoryGame.Controller
             {
                 if (!_missingSpriteWarned)
                 {
-                    Debug.LogWarning(
-                        $"[BoardFrame] Missing SpriteRenderer sprite on '{name}'. Using simple grid fallback.");
                     _missingSpriteWarned = true;
                 }
 
@@ -51,7 +47,7 @@ namespace MemoryGame.Controller
             }
 
             var b = sr.bounds;
-            float padX =BoardConstants.DefaultInnerPadding  * b.size.x;
+            float padX = BoardConstants.DefaultInnerPadding * b.size.x;
             float padY = BoardConstants.DefaultInnerPadding * b.size.y;
             inner = new Rect(b.min.x + padX, b.min.y + padY, b.size.x - 2f * padX, b.size.y - 2f * padY);
             return true;

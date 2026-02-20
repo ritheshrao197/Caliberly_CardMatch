@@ -5,6 +5,9 @@ using MemoryGame.UI.Events;
 
 namespace MemoryGame.Controller
 {
+    /// <summary>
+    /// Handles SFX/music playback and reacts to gameplay/UI events.
+    /// </summary>
     public class AudioManager : MonoBehaviour
     {
         // ---------- Clips ----------
@@ -28,8 +31,8 @@ namespace MemoryGame.Controller
         [SerializeField] private bool playMusicOnAwake = true;
 
         [Header("Volumes")]
-        [Range(0f, 1f)] [SerializeField] private float sfxVolume = AudioConstants.DefaultSfxVolume;
-        [Range(0f, 1f)] [SerializeField] private float musicVolume = AudioConstants.DefaultMusicVolume;
+        [Range(0f, 1f)][SerializeField] private float sfxVolume = AudioConstants.DefaultSfxVolume;
+        [Range(0f, 1f)][SerializeField] private float musicVolume = AudioConstants.DefaultMusicVolume;
 
         private AudioSource _sfx;
         private AudioSource _music;
@@ -80,8 +83,8 @@ namespace MemoryGame.Controller
 
         private void LoadPreferences()
         {
-            _sfxEnabled =true;// PlayerPrefs.GetInt(KEY_SFX, 1) == 1;
-            _musicEnabled = true;//PlayerPrefs.GetInt(KEY_MUSIC, 1) == 1;
+            _sfxEnabled = PlayerPrefs.GetInt(KEY_SFX, 1) == 1;
+            _musicEnabled = PlayerPrefs.GetInt(KEY_MUSIC, 1) == 1;
         }
 
         private void InitializeMusic()
@@ -172,7 +175,10 @@ namespace MemoryGame.Controller
         #endregion
 
         #region Core Audio Logic
-
+        /// <summary>
+        /// Plays a one-shot SFX clip if SFX is enabled and the clip is valid.
+        /// </summary>
+        /// <param name="clip"></param>
         private void PlaySfx(AudioClip clip)
         {
             if (!_sfxEnabled || clip == null)
@@ -180,18 +186,24 @@ namespace MemoryGame.Controller
 
             _sfx.PlayOneShot(clip, sfxVolume);
         }
-
+        /// <summary>
+        /// Toggles SFX enabled state, saves preference, and broadcasts new state.
+        /// </summary>
         private void ToggleSfx()
         {
             _sfxEnabled = !_sfxEnabled;
             PlayerPrefs.SetInt(KEY_SFX, _sfxEnabled ? 1 : 0);
+            PlayerPrefs.Save();
             EventBus.Instance.Publish(new ToggleSfxEvent(_sfxEnabled));
         }
-
+        /// <summary>
+        /// Toggles music enabled state, saves preference, starts/stops music, and broadcasts new state.
+        /// </summary>
         private void ToggleMusic()
         {
             _musicEnabled = !_musicEnabled;
             PlayerPrefs.SetInt(KEY_MUSIC, _musicEnabled ? 1 : 0);
+            PlayerPrefs.Save();
 
             if (_musicEnabled)
             {

@@ -3,6 +3,9 @@ using MemoryGame.Controller;
 
 namespace MemoryGame.Events
 {
+    /// <summary>
+    /// Fired when a card is selected by the player.
+    /// </summary>
     public struct CardSelectedEvent : IEvent
     {
         public CardController Card;
@@ -12,7 +15,11 @@ namespace MemoryGame.Events
             Card = card;
         }
     }
-     public struct PairMatchedEvent : IEvent
+
+    /// <summary>
+    /// Fired when two selected cards match.
+    /// </summary>
+    public struct PairMatchedEvent : IEvent
     {
         public CardController First;
         public CardController Second;
@@ -23,7 +30,11 @@ namespace MemoryGame.Events
             Second = second;
         }
     }
-     public struct PairMismatchedEvent : IEvent
+
+    /// <summary>
+    /// Fired when two selected cards do not match.
+    /// </summary>
+    public struct PairMismatchedEvent : IEvent
     {
         public CardController First;
         public CardController Second;
@@ -34,6 +45,10 @@ namespace MemoryGame.Events
             Second = second;
         }
     }
+
+    /// <summary>
+    /// Fired when remaining pair count changes.
+    /// </summary>
     public struct RemainingPairsChangedEvent : IEvent
     {
         public int Remaining;
@@ -43,6 +58,10 @@ namespace MemoryGame.Events
             Remaining = remaining;
         }
     }
+
+    /// <summary>
+    /// Fired when a level starts.
+    /// </summary>
     public struct LevelStartedEvent : IEvent
     {
         public LevelDef Level;
@@ -54,7 +73,11 @@ namespace MemoryGame.Events
             Index = index;
         }
     }
-     public struct LevelCompletedEvent : IEvent
+
+    /// <summary>
+    /// Fired when a level is completed successfully.
+    /// </summary>
+    public struct LevelCompletedEvent : IEvent
     {
         public int LevelIndex;
 
@@ -62,7 +85,12 @@ namespace MemoryGame.Events
         {
             LevelIndex = index;
         }
-    }public struct GameLostEvent : IEvent
+    }
+
+    /// <summary>
+    /// Fired when player loses a level.
+    /// </summary>
+    public struct GameLostEvent : IEvent
     {
         public string Reason;
 
@@ -71,19 +99,31 @@ namespace MemoryGame.Events
             Reason = reason;
         }
     }
-     public struct GameWonEvent : IEvent
+
+    /// <summary>
+    /// Fired when player wins a level.
+    /// </summary>
+    public struct GameWonEvent : IEvent
     {
     }
+
+    /// <summary>
+    /// Fired when board has been generated.
+    /// </summary>
     public struct BoardBuiltEvent : IEvent
     {
-        private int pairs;
+        public int Pairs;
 
         public BoardBuiltEvent(int pairs)
         {
-            this.pairs = pairs;
+            Pairs = pairs;
         }
     }
-    public struct ShowResultEvent
+
+    /// <summary>
+    /// Requests result popup presentation.
+    /// </summary>
+    public struct ShowResultEvent : IEvent
     {
         public bool Win;
         public int LevelIndex;
@@ -93,11 +133,11 @@ namespace MemoryGame.Events
 
         public ShowResultEvent(bool win, int levelIndex, string reason, Action onNext, Action onHome)
         {
-            this.Win = win;
-            this.LevelIndex = levelIndex;
-            this.Reason = reason;
-            this.OnNext = onNext;
-            this.OnHome = onHome;
+            Win = win;
+            LevelIndex = levelIndex;
+            Reason = reason;
+            OnNext = onNext;
+            OnHome = onHome;
         }
     }
 }

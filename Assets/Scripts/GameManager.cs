@@ -9,6 +9,9 @@ using UnityEngine.Pool;
 
 namespace MemoryGame
 {
+    /// <summary>
+    /// Orchestrates level lifecycle, board creation, and high-level game commands.
+    /// </summary>
     public class GameManager : MonoBehaviour
     {
         public static GameManager Instance { get; private set; }

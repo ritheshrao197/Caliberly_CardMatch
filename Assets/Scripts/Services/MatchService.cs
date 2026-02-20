@@ -8,6 +8,9 @@ using MemoryGame.Controller;
 
 namespace MemoryGame.Services
 {
+    /// <summary>
+    /// Resolves card pair selections and publishes match/mismatch/win events.
+    /// </summary>
     public class MatchService : MonoBehaviour
     {
         [Header("Refs")]
