@@ -8,8 +8,8 @@ namespace MemoryGame.Services
     /// </summary>
     public class ScoreTracker : MonoBehaviour
     {
-        [SerializeField] private int matchBaseScore = 100;
-        [SerializeField] private int mismatchPenalty = 10;
+        [SerializeField] private int matchBaseScore = 10;
+        [SerializeField] private int mismatchPenalty = 1;
 
         private EventBus _bus;
         private int _score;

@@ -32,6 +32,11 @@ namespace MemoryGame.Views
         /// </summary>
         public TextMeshProUGUI statusText;
 
+        /// <summary>
+        /// Text component to display score and combo
+        /// </summary>
+        public TextMeshProUGUI scoreText;
+
         private EventBus _bus;
         private int _moves;
         private int _moveLimit;
@@ -61,6 +66,7 @@ namespace MemoryGame.Views
             _bus.Subscribe<RemainingPairsChangedEvent>(OnRemainingPairsChanged);
             _bus.Subscribe<GameWonEvent>(OnGameWon);
             _bus.Subscribe<GameLostEvent>(OnGameLost);
+            _bus.Subscribe<ScoreChangedEvent>(OnScoreChanged);
         }
         
         /// <summary>
@@ -77,6 +83,7 @@ namespace MemoryGame.Views
             _bus.Unsubscribe<RemainingPairsChangedEvent>(OnRemainingPairsChanged);
             _bus.Unsubscribe<GameWonEvent>(OnGameWon);
             _bus.Unsubscribe<GameLostEvent>(OnGameLost);
+            _bus.Unsubscribe<ScoreChangedEvent>(OnScoreChanged);
         }
 
         /// <summary>
@@ -128,11 +135,13 @@ namespace MemoryGame.Views
             _timeLimitFormatted = _timeLimit > 0f ? FormatTime(_timeLimit) : string.Empty;
             _lastTimerSecond = -1;
             if (levelText) 
-                levelText.text = $"Level {idx + 1}: {def.rows}x{def.cols}";
+                levelText.text = $" {idx + 1}: {def.rows}x{def.cols}"; 
             if (movesText) 
                 movesText.text = _moveLimit > 0 ? $"0 / {_moveLimit}" : "0";
             if (statusText) 
                 statusText.text = "Find all pairs";
+            if (scoreText)
+                scoreText.text = "0";
         }
 
         /// <summary>
@@ -146,7 +155,7 @@ namespace MemoryGame.Views
             if (movesText) 
                 movesText.text = _moveLimit > 0 ? $"{_moves} / {_moveLimit}" : _moves.ToString();
         }
-  private void OnPairEvent(PairMismatchedEvent evt)
+        private void OnPairEvent(PairMismatchedEvent evt)
         {
             _moves++;
             if (movesText) 
@@ -176,6 +185,16 @@ namespace MemoryGame.Views
         private void OnGameLost(GameLostEvent evt) { 
             if (statusText) 
                 statusText.text = evt.Reason == "time" ? "Time up" : "Move limit reached"; 
+        }
+
+        private void OnScoreChanged(ScoreChangedEvent evt)
+        {
+            if (!scoreText)
+                return;
+
+            scoreText.text = evt.Combo > 1
+                ? $"{evt.Score} (x{evt.Combo})"
+                : $"{evt.Score}";
         }
     }
 }

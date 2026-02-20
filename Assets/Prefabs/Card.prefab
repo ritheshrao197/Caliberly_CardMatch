@@ -267,6 +267,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   view: {fileID: 8881490048688269019}
   flipDuration: 0.25
+  postInitInputUnlockDelay: 0.2
 --- !u!61 &1888568568564775800
 BoxCollider2D:
   m_ObjectHideFlags: 0
