@@ -16,6 +16,7 @@ namespace MemoryGame.Controller
         private readonly CardSet _set;
         private readonly ObjectPool<CardController> _pool;
         private readonly BoardFrame _frame;
+        private readonly GameConfig _config;
 
         public List<CardController> Cards { get; } = new List<CardController>();
 
@@ -23,12 +24,14 @@ namespace MemoryGame.Controller
             Transform root,
             CardSet set,
             ObjectPool<CardController> pool,
-            BoardFrame frame)
+            BoardFrame frame,
+            GameConfig config)
         {
             _root = root ?? throw new ArgumentNullException(nameof(root));
             _set = set ?? throw new ArgumentNullException(nameof(set));
             _pool = pool ?? throw new ArgumentNullException(nameof(pool));
             _frame = frame;
+            _config = config;
         }
 
         public void Build(int rows, int cols)
@@ -160,7 +163,9 @@ namespace MemoryGame.Controller
         {
             var face = _set.GetFaceById(id);
             card.Init(id, face, false);
-            card.flipDuration = BoardConstants.DefaultFlipDuration;
+            card.flipDuration = _config != null
+                ? _config.flipDuration
+                : BoardConstants.DefaultFlipDuration;
         }
 
         private Vector2 GetCardNaturalSize(CardController card)

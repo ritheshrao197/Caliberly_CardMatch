@@ -97,36 +97,48 @@ namespace MemoryGame.Controller
         private void SubscribeEvents()
         {
             // Gameplay
-            _bus.Subscribe<CardSelectedEvent>(_ => PlaySfx(flip));
-            _bus.Subscribe<PairMatchedEvent>(_ => PlaySfx(match));
-            _bus.Subscribe<PairMismatchedEvent>(_ => PlaySfx(mismatch));
-            _bus.Subscribe<GameWonEvent>(_ => PlaySfx(levelWin));
-            _bus.Subscribe<GameLostEvent>(_ => PlaySfx(levelFail));
+            _bus.Subscribe<CardSelectedEvent>(OnCardSelected);
+            _bus.Subscribe<PairMatchedEvent>(OnPairMatched);
+            _bus.Subscribe<PairMismatchedEvent>(OnPairMismatched);
+            _bus.Subscribe<GameWonEvent>(OnGameWon);
+            _bus.Subscribe<GameLostEvent>(OnGameLost);
             _bus.Subscribe<LevelStartedEvent>(OnLevelStarted);
 
             // UI
-            _bus.Subscribe<OnPauseEvent>(_ => PlaySfx(popupOpen));
-            _bus.Subscribe<ShowLevelSelectEvent>(_ => PlaySfx(popupOpen));
+            _bus.Subscribe<OnPauseEvent>(OnPause);
+            _bus.Subscribe<ShowLevelSelectEvent>(OnShowLevelSelect);
 
-            _bus.Subscribe<OnResumeEvent>(_ => PlaySfx(popupClose));
-            _bus.Subscribe<OnHideLevelSelectEvent>(_ => PlaySfx(popupClose));
+            _bus.Subscribe<OnResumeEvent>(OnResume);
+            _bus.Subscribe<OnHideLevelSelectEvent>(OnHideLevelSelect);
 
-            _bus.Subscribe<OnGoHomeEvent>(_ => PlaySfx(click));
-            _bus.Subscribe<OnRestartEvent>(_ => PlaySfx(click));
-            _bus.Subscribe<StartFromHomeEvent>(_ => PlaySfx(click));
-            _bus.Subscribe<StartLevelEvent>(_ => PlaySfx(click));
+            _bus.Subscribe<OnGoHomeEvent>(OnGoHome);
+            _bus.Subscribe<OnRestartEvent>(OnRestart);
+            _bus.Subscribe<StartFromHomeEvent>(OnStartFromHome);
+            _bus.Subscribe<StartLevelEvent>(OnStartLevel);
 
             // Settings
-            _bus.Subscribe<OnClickToggleSfxEvent>(_ => ToggleSfx());
-            _bus.Subscribe<OnClickToggleMusicEvent>(_ => ToggleMusic());
+            _bus.Subscribe<OnClickToggleSfxEvent>(OnClickToggleSfx);
+            _bus.Subscribe<OnClickToggleMusicEvent>(OnClickToggleMusic);
         }
 
         private void UnsubscribeEvents()
         {
-            _bus.Clear(); 
-            // Since this AudioManager subscribes anonymously,
-            // safest option is clearing if it owns global audio.
-            // If not, switch to stored delegates instead.
+            _bus.Unsubscribe<CardSelectedEvent>(OnCardSelected);
+            _bus.Unsubscribe<PairMatchedEvent>(OnPairMatched);
+            _bus.Unsubscribe<PairMismatchedEvent>(OnPairMismatched);
+            _bus.Unsubscribe<GameWonEvent>(OnGameWon);
+            _bus.Unsubscribe<GameLostEvent>(OnGameLost);
+            _bus.Unsubscribe<LevelStartedEvent>(OnLevelStarted);
+            _bus.Unsubscribe<OnPauseEvent>(OnPause);
+            _bus.Unsubscribe<ShowLevelSelectEvent>(OnShowLevelSelect);
+            _bus.Unsubscribe<OnResumeEvent>(OnResume);
+            _bus.Unsubscribe<OnHideLevelSelectEvent>(OnHideLevelSelect);
+            _bus.Unsubscribe<OnGoHomeEvent>(OnGoHome);
+            _bus.Unsubscribe<OnRestartEvent>(OnRestart);
+            _bus.Unsubscribe<StartFromHomeEvent>(OnStartFromHome);
+            _bus.Unsubscribe<StartLevelEvent>(OnStartLevel);
+            _bus.Unsubscribe<OnClickToggleSfxEvent>(OnClickToggleSfx);
+            _bus.Unsubscribe<OnClickToggleMusicEvent>(OnClickToggleMusic);
         }
 
         #endregion
@@ -140,6 +152,22 @@ namespace MemoryGame.Controller
             if (_musicEnabled && _music.clip != null && !_music.isPlaying)
                 _music.Play();
         }
+
+        private void OnCardSelected(CardSelectedEvent e) => PlaySfx(flip);
+        private void OnPairMatched(PairMatchedEvent e) => PlaySfx(match);
+        private void OnPairMismatched(PairMismatchedEvent e) => PlaySfx(mismatch);
+        private void OnGameWon(GameWonEvent e) => PlaySfx(levelWin);
+        private void OnGameLost(GameLostEvent e) => PlaySfx(levelFail);
+        private void OnPause(OnPauseEvent e) => PlaySfx(popupOpen);
+        private void OnShowLevelSelect(ShowLevelSelectEvent e) => PlaySfx(popupOpen);
+        private void OnResume(OnResumeEvent e) => PlaySfx(popupClose);
+        private void OnHideLevelSelect(OnHideLevelSelectEvent e) => PlaySfx(popupClose);
+        private void OnGoHome(OnGoHomeEvent e) => PlaySfx(click);
+        private void OnRestart(OnRestartEvent e) => PlaySfx(click);
+        private void OnStartFromHome(StartFromHomeEvent e) => PlaySfx(click);
+        private void OnStartLevel(StartLevelEvent e) => PlaySfx(click);
+        private void OnClickToggleSfx(OnClickToggleSfxEvent e) => ToggleSfx();
+        private void OnClickToggleMusic(OnClickToggleMusicEvent e) => ToggleMusic();
 
         #endregion
 

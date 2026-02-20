@@ -76,7 +76,7 @@ namespace MemoryGame
             ValidateSetup();
 
             _pool = new ObjectPool<CardController>(cardPrefab, boardRoot, 0);
-            _board = new BoardController(boardRoot, cardSet, _pool, frame);
+            _board = new BoardController(boardRoot, cardSet, _pool, frame, config);
 
             _levelIndex = progress ? progress.GetCurrentLevelIndex() : 0;
 

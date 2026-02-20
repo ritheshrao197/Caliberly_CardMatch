@@ -27,36 +27,32 @@ namespace MemoryGame.Views
         {
             var bus = EventBus.Instance;
 
-            bus.Subscribe<ShowLevelSelectEvent>(_ => ShowLevelSelect());
-            bus.Subscribe<StartFromHomeEvent>(_ => SetMainState(MainState.HUD));
-            bus.Subscribe<OnHideLevelSelectEvent>(_ => SetMainState(MainState.Home));
-            bus.Subscribe<OnGoHomeEvent>(_ => SetMainState(MainState.Home));
-            bus.Subscribe<OnShowHUDEvent>(_ => SetMainState(MainState.HUD));
-            bus.Subscribe<OnPauseEvent>(_ => ShowPause());
-            bus.Subscribe<OnResumeEvent>(_ => HidePause());
-            bus.Subscribe<OnRestartEvent>(_ => HideAllPopups());
-            bus.Subscribe<StartLevelEvent>(_ => SetMainState(MainState.HUD));
-            bus.Subscribe<ShowResultEvent>(e => ShowResult(
-                e.Win,
-                e.LevelIndex,
-                e.Reason,
-                e.OnNext,
-                e.OnHome));
+            bus.Subscribe<ShowLevelSelectEvent>(OnShowLevelSelect);
+            bus.Subscribe<StartFromHomeEvent>(OnStartFromHome);
+            bus.Subscribe<OnHideLevelSelectEvent>(OnHideLevelSelect);
+            bus.Subscribe<OnGoHomeEvent>(OnGoHome);
+            bus.Subscribe<OnShowHUDEvent>(OnShowHud);
+            bus.Subscribe<OnPauseEvent>(OnPause);
+            bus.Subscribe<OnResumeEvent>(OnResume);
+            bus.Subscribe<OnRestartEvent>(OnRestart);
+            bus.Subscribe<StartLevelEvent>(OnStartLevel);
+            bus.Subscribe<ShowResultEvent>(OnShowResult);
         }
 
         private void OnDisable()
         {
             var bus = EventBus.Instance;
 
-            bus.Unsubscribe<ShowLevelSelectEvent>(_ => ShowLevelSelect());
-            bus.Unsubscribe<StartFromHomeEvent>(_ => SetMainState(MainState.HUD));
-            bus.Unsubscribe<OnHideLevelSelectEvent>(_ => SetMainState(MainState.Home));
-            bus.Unsubscribe<OnGoHomeEvent>(_ => SetMainState(MainState.Home));
-            bus.Unsubscribe<OnShowHUDEvent>(_ => SetMainState(MainState.HUD));
-            bus.Unsubscribe<OnPauseEvent>(_ => ShowPause());
-            bus.Unsubscribe<OnResumeEvent>(_ => HidePause());
-            bus.Unsubscribe<OnRestartEvent>(_ => HideAllPopups());
-            bus.Unsubscribe<StartLevelEvent>(_ => SetMainState(MainState.HUD));
+            bus.Unsubscribe<ShowLevelSelectEvent>(OnShowLevelSelect);
+            bus.Unsubscribe<StartFromHomeEvent>(OnStartFromHome);
+            bus.Unsubscribe<OnHideLevelSelectEvent>(OnHideLevelSelect);
+            bus.Unsubscribe<OnGoHomeEvent>(OnGoHome);
+            bus.Unsubscribe<OnShowHUDEvent>(OnShowHud);
+            bus.Unsubscribe<OnPauseEvent>(OnPause);
+            bus.Unsubscribe<OnResumeEvent>(OnResume);
+            bus.Unsubscribe<OnRestartEvent>(OnRestart);
+            bus.Unsubscribe<StartLevelEvent>(OnStartLevel);
+            bus.Unsubscribe<ShowResultEvent>(OnShowResult);
         }
 
         // ------------------------
@@ -90,6 +86,18 @@ namespace MemoryGame.Views
             SetMainState(MainState.Home);
             ShowPopup(levelSelectPanel);
         }
+
+        private void OnShowLevelSelect(ShowLevelSelectEvent e) => ShowLevelSelect();
+        private void OnStartFromHome(StartFromHomeEvent e) => SetMainState(MainState.HUD);
+        private void OnHideLevelSelect(OnHideLevelSelectEvent e) => SetMainState(MainState.Home);
+        private void OnGoHome(OnGoHomeEvent e) => SetMainState(MainState.Home);
+        private void OnShowHud(OnShowHUDEvent e) => SetMainState(MainState.HUD);
+        private void OnPause(OnPauseEvent e) => ShowPause();
+        private void OnResume(OnResumeEvent e) => HidePause();
+        private void OnRestart(OnRestartEvent e) => HideAllPopups();
+        private void OnStartLevel(StartLevelEvent e) => SetMainState(MainState.HUD);
+        private void OnShowResult(ShowResultEvent e) =>
+            ShowResult(e.Win, e.LevelIndex, e.Reason, e.OnNext, e.OnHome);
 
         public void ShowResult(
           bool win, int levelIndex, string reason, Action onNext, Action onHome)

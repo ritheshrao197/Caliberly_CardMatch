@@ -1,4 +1,4 @@
-using System;
+using System.Collections;
 using MemoryGame.Controller;
 using MemoryGame.Events;
 using UnityEngine;
@@ -69,18 +69,26 @@ namespace MemoryGame
         {
             if (_ended) return;
             _moves++;
-            // Check if move limit has been exceeded
+            StartCoroutine(EvaluateMoveLimitAfterMatch());
+        }
+
+        private IEnumerator EvaluateMoveLimitAfterMatch()
+        {
+            // MatchService raises GameWon after PairMatched in the same frame.
+            // Defer check so win state can settle first.
+            yield return null;
+
+            if (_ended)
+                yield break;
+
             if (_moveLimit > 0 && _moves >= _moveLimit)
             {
-                // If limit reached before GameWon fired, it's a loss
-                if (!evt.First.Model.IsMatched || !evt.Second.Model.IsMatched)
-                {
-                    _ended = true;
-                    _timer?.StopTimer();
-                    EventBus.Instance.Publish(new GameLostEvent("moves"));
-                }
+                _ended = true;
+                _timer?.StopTimer();
+                EventBus.Instance.Publish(new GameLostEvent("moves"));
             }
         }
+
         private void OnPairMismatchedEvent(PairMismatchedEvent evt)
         {
             if (_ended) return;
@@ -88,13 +96,9 @@ namespace MemoryGame
             // Check if move limit has been exceeded
             if (_moveLimit > 0 && _moves >= _moveLimit)
             {
-                // If limit reached before GameWon fired, it's a loss
-                if (!evt.First.Model.IsMatched || !evt.Second.Model.IsMatched)
-                {
-                    _ended = true;
-                    _timer?.StopTimer();
-                    EventBus.Instance.Publish(new GameLostEvent("moves"));
-                }
+                _ended = true;
+                _timer?.StopTimer();
+                EventBus.Instance.Publish(new GameLostEvent("moves"));
             }
         }
         /// <summary>
