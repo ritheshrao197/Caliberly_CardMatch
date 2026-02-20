@@ -86,7 +86,7 @@ namespace MemoryGame.Views
                 int levelIndex = i;
                 btn.onClick.AddListener(() =>
                 {
-                    EventBus.Instance.Publish(new OnHideLevelSelectEvent());
+                    // EventBus.Instance.Publish(new OnHideLevelSelectEvent());
                     EventBus.Instance.Publish(new StartLevelEvent(levelIndex));
                 });
             }

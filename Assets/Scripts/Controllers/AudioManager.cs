@@ -80,8 +80,8 @@ namespace MemoryGame.Controller
 
         private void LoadPreferences()
         {
-            _sfxEnabled = PlayerPrefs.GetInt(KEY_SFX, 1) == 1;
-            _musicEnabled = PlayerPrefs.GetInt(KEY_MUSIC, 1) == 1;
+            _sfxEnabled =true;// PlayerPrefs.GetInt(KEY_SFX, 1) == 1;
+            _musicEnabled = true;//PlayerPrefs.GetInt(KEY_MUSIC, 1) == 1;
         }
 
         private void InitializeMusic()
@@ -105,20 +105,20 @@ namespace MemoryGame.Controller
             _bus.Subscribe<LevelStartedEvent>(OnLevelStarted);
 
             // UI
-            _bus.Subscribe<PauseEvent>(_ => PlaySfx(popupOpen));
+            _bus.Subscribe<OnPauseEvent>(_ => PlaySfx(popupOpen));
             _bus.Subscribe<ShowLevelSelectEvent>(_ => PlaySfx(popupOpen));
 
-            _bus.Subscribe<ResumeEvent>(_ => PlaySfx(popupClose));
-            _bus.Subscribe<HideLevelSelectEvent>(_ => PlaySfx(popupClose));
+            _bus.Subscribe<OnResumeEvent>(_ => PlaySfx(popupClose));
+            _bus.Subscribe<OnHideLevelSelectEvent>(_ => PlaySfx(popupClose));
 
-            _bus.Subscribe<GoHomeEvent>(_ => PlaySfx(click));
-            _bus.Subscribe<RestartEvent>(_ => PlaySfx(click));
+            _bus.Subscribe<OnGoHomeEvent>(_ => PlaySfx(click));
+            _bus.Subscribe<OnRestartEvent>(_ => PlaySfx(click));
             _bus.Subscribe<StartFromHomeEvent>(_ => PlaySfx(click));
             _bus.Subscribe<StartLevelEvent>(_ => PlaySfx(click));
 
             // Settings
-            _bus.Subscribe<ToggleSfxEvent>(_ => ToggleSfx());
-            _bus.Subscribe<ToggleMusicEvent>(_ => ToggleMusic());
+            _bus.Subscribe<OnClickToggleSfxEvent>(_ => ToggleSfx());
+            _bus.Subscribe<OnClickToggleMusicEvent>(_ => ToggleMusic());
         }
 
         private void UnsubscribeEvents()
@@ -156,13 +156,14 @@ namespace MemoryGame.Controller
         private void ToggleSfx()
         {
             _sfxEnabled = !_sfxEnabled;
-            PlayerPrefs.SetInt(KEY_SFX, _sfxEnabled ? 1 : 0);
+            // PlayerPrefs.SetInt(KEY_SFX, _sfxEnabled ? 1 : 0);
+            EventBus.Instance.Publish(new ToggleSfxEvent(_sfxEnabled));
         }
 
         private void ToggleMusic()
         {
             _musicEnabled = !_musicEnabled;
-            PlayerPrefs.SetInt(KEY_MUSIC, _musicEnabled ? 1 : 0);
+            // PlayerPrefs.SetInt(KEY_MUSIC, _musicEnabled ? 1 : 0);
 
             if (_musicEnabled)
             {
@@ -174,6 +175,7 @@ namespace MemoryGame.Controller
                 if (_music.isPlaying)
                     _music.Stop();
             }
+            EventBus.Instance.Publish(new ToggleMusicEvent(_musicEnabled));
         }
 
         #endregion

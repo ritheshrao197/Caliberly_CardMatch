@@ -13,16 +13,30 @@ namespace MemoryGame.UI.Events
             LevelIndex = levelIndex;
         }
     }
-    public struct RestartEvent : IEvent{}
-    public struct GoHomeEvent : IEvent{}
-    public struct ShowHUDEvent : IEvent{}
     public struct ShowLevelSelectEvent : IEvent{}
-    public struct HideLevelSelectEvent : IEvent{}
-    public struct PauseEvent : IEvent{}
-    public struct ResumeEvent : IEvent{}
     public struct ResetProgressEvent : IEvent{}
-    public struct ToggleSfxEvent : IEvent{}
-    public struct ToggleMusicEvent : IEvent{}
+        public struct OnClickToggleSfxEvent : IEvent{}
+        public struct OnClickToggleMusicEvent : IEvent{}
+
+    public struct ToggleSfxEvent : IEvent
+    {
+        public bool Enabled;
+
+        public ToggleSfxEvent(bool enabled)
+        {
+            Enabled = enabled;
+        }
+    }
+
+    public struct ToggleMusicEvent : IEvent
+    {
+        public bool Enabled;
+
+        public ToggleMusicEvent(bool enabled)
+        {
+            Enabled = enabled;
+        }
+    }
     public struct QuitEvent : IEvent{}
      public struct OnRestartEvent : IEvent{}
     public struct OnResumeEvent : IEvent{}
@@ -30,5 +44,4 @@ namespace MemoryGame.UI.Events
     public struct OnShowHUDEvent : IEvent{}
     public struct OnGoHomeEvent : IEvent{}
     public struct OnHideLevelSelectEvent : IEvent{}
-    public struct OnShowLevelSelectEvent : IEvent{}
 }

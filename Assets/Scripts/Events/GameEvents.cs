@@ -1,3 +1,4 @@
+using System;
 using MemoryGame.Controller;
 
 namespace MemoryGame.Events
@@ -80,6 +81,23 @@ namespace MemoryGame.Events
         public BoardBuiltEvent(int pairs)
         {
             this.pairs = pairs;
+        }
+    }
+    public struct ShowResultEvent
+    {
+        public bool Win;
+        public int LevelIndex;
+        public string Reason;
+        public Action OnNext;
+        public Action OnHome;
+
+        public ShowResultEvent(bool win, int levelIndex, string reason, Action onNext, Action onHome)
+        {
+            this.Win = win;
+            this.LevelIndex = levelIndex;
+            this.Reason = reason;
+            this.OnNext = onNext;
+            this.OnHome = onHome;
         }
     }
 }

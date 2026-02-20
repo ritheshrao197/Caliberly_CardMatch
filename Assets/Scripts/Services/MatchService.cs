@@ -1,135 +1,153 @@
 using System.Collections;
 using System.Collections.Generic;
 using MemoryGame.Config;
-using MemoryGame.Controller;
 using MemoryGame.Events;
-using UnityEngine;
 using MemoryGame.Constants;
-using System;
+using UnityEngine;
+using MemoryGame.Controller;
 
 namespace MemoryGame.Services
 {
-    /// <summary>
-    /// Service to handle matching logic between selected cards in the memory game.
-    /// Manages card selection, determines matches, and handles game progression.
-    /// </summary>
     public class MatchService : MonoBehaviour
     {
-        /// <summary>
-        /// Reference to the game configuration settings
-        /// </summary>
         [Header("Refs")]
-        public GameConfig config;
+        [SerializeField] private GameConfig config;
 
-        private CardController _first, _second;
+        private CardController _first;
+        private CardController _second;
+
         private bool _busy;
         private int _remainingPairs;
-        private readonly List<CardController> _allCards = new List<CardController>();
+
+        private readonly List<CardController> _allCards = new();
+        private EventBus _bus;
+
+        private WaitForSeconds _resolveDelay;
+        private WaitForSeconds _mismatchDelay;
+
+        private void Awake()
+        {
+            _bus = EventBus.Instance;
+
+            _resolveDelay = new WaitForSeconds(BoardConstants.ResolveBufferDelay);
+        }
 
         private void OnEnable()
         {
-            EventBus.Instance.Subscribe<CardSelectedEvent>(OnCardSelected);
-            EventBus.Instance.Subscribe<RemainingPairsChangedEvent>(OnRemainingPairsChanged);
-            EventBus.Instance.Subscribe<LevelStartedEvent>(OnLevelStarted);
-
+            _bus.Subscribe<CardSelectedEvent>(OnCardSelected);
+            _bus.Subscribe<LevelStartedEvent>(OnLevelStarted);
         }
 
         private void OnDisable()
         {
-            EventBus.Instance.Unsubscribe<CardSelectedEvent>(OnCardSelected);
-            EventBus.Instance.Unsubscribe<RemainingPairsChangedEvent>(OnRemainingPairsChanged);
-            EventBus.Instance.Unsubscribe<LevelStartedEvent>(OnLevelStarted);
+            _bus.Unsubscribe<CardSelectedEvent>(OnCardSelected);
+            _bus.Unsubscribe<LevelStartedEvent>(OnLevelStarted);
         }
 
-        private void OnLevelStarted(LevelStartedEvent @event)
+        private void OnLevelStarted(LevelStartedEvent e)
         {
-            _remainingPairs = @event.Level.cols * @event.Level.rows / 2;
-        }
-        
+            _remainingPairs = (e.Level.cols * e.Level.rows) / 2;
 
-        /// <summary>
-        /// Registers all cards in the current game for matching logic
-        /// </summary>
-        /// <param name="cards">Collection of card controllers to register</param>
+            float delay = config != null
+                ? config.mismatchHideDelay
+                : BoardConstants.DefaultMismatchHideDelay;
+
+            _mismatchDelay = new WaitForSeconds(Mathf.Max(0f, delay));
+
+            _first = null;
+            _second = null;
+            _busy = false;
+        }
+
         public void RegisterCards(IEnumerable<CardController> cards)
         {
             _allCards.Clear();
             _allCards.AddRange(cards);
         }
 
-        private void OnRemainingPairsChanged(RemainingPairsChangedEvent @event)
+        private void OnCardSelected(CardSelectedEvent e)
         {
-            _remainingPairs = @event.Remaining;
-            Debug.Log($"Remaining pairs updated: {_remainingPairs}");
-        }
+            if (_busy || e.Card == null)
+                return;
 
-        /// <summary>
-        /// Sets input enabled/disabled state for all registered cards
-        /// </summary>
-        /// <param name="enabled">True to enable input, false to disable</param>
-        private void SetAllInput(bool enabled)
-        {
-            foreach (var c in _allCards) c.SetInput(enabled);
-        }
-
-        /// <summary>
-        /// Handles card selection events from the game events system
-        /// </summary>
-        /// <param name="c">The card controller that was selected</param>
-        private void OnCardSelected(CardSelectedEvent @event)
-        {
-            if (_busy) return;
             if (_first == null)
             {
-                _first = @event.Card; return;
+                _first = e.Card;
+                return;
             }
-            if (@event.Card == _first) return;
 
-            _second = @event.Card;
-            StartCoroutine(Resolve());
+            if (e.Card == _first)
+                return;
+
+            _second = e.Card;
+            StartCoroutine(ResolvePair());
         }
 
-        /// <summary>
-        /// Coroutine that resolves the matching logic between two selected cards
-        /// </summary>
-        /// <returns>IEnumerator for coroutine execution</returns>
-        private IEnumerator Resolve()
+        private IEnumerator ResolvePair()
         {
             _busy = true;
             SetAllInput(false);
 
-            yield return new WaitForSeconds(BoardConstants.ResolveBufferDelay); // tiny buffer
+            yield return _resolveDelay;
 
-            // Check if the two selected cards match
-            if (_first.Model.Id == _second.Model.Id)
+            bool isMatch = _first.Model.Id == _second.Model.Id;
+
+            if (isMatch)
             {
-                // Cards match - lock them and notify listeners
-                _first.Lock();
-                _second.Lock();
-                EventBus.Instance.Publish(new PairMatchedEvent(_first, _second));
-                _remainingPairs--;
-                EventBus.Instance.Publish(new RemainingPairsChangedEvent(_remainingPairs));
-
-                // Check if all pairs have been matched (game won)
-                if (_remainingPairs <= 0)
-                {
-                    EventBus.Instance.Publish(new GameWonEvent());
-                }
+                HandleMatch();
             }
             else
             {
-                // Cards don't match - notify listeners and flip them back
-                EventBus.Instance.Publish(new PairMismatchedEvent(_first, _second));
-                yield return new WaitForSeconds(Mathf.Max(0f, config != null ? config.mismatchHideDelay : BoardConstants.DefaultMismatchHideDelay));
-                // Flip back
-                yield return _first.StartCoroutine(_first.FlipRoutine(false));
-                yield return _second.StartCoroutine(_second.FlipRoutine(false));
+                yield return HandleMismatch();
             }
 
-            // Reset selection and re-enable input
-            _first = _second = null;
-            SetAllInput(true);
+            ResetSelection();
+        }
+
+        private void HandleMatch()
+        {
+            _first.Lock();
+            _second.Lock();
+
+            _remainingPairs--;
+
+            _bus.Publish(new PairMatchedEvent(_first, _second));
+            _bus.Publish(new RemainingPairsChangedEvent(_remainingPairs));
+
+            if (_remainingPairs <= 0)
+            {
+                _bus.Publish(new GameWonEvent());
+            }
+        }
+
+        private IEnumerator HandleMismatch()
+        {
+            _bus.Publish(new PairMismatchedEvent(_first, _second));
+
+            yield return _mismatchDelay;
+
+            // Avoid nested coroutine allocations
+            yield return _first.FlipRoutine(false);
+            yield return _second.FlipRoutine(false);
+        }
+
+        private void ResetSelection()
+        {
+            _first = null;
+            _second = null;
+
             _busy = false;
+
+            if (_remainingPairs > 0)
+                SetAllInput(true);
+        }
+
+        private void SetAllInput(bool enabled)
+        {
+            for (int i = 0; i < _allCards.Count; i++)
+            {
+                _allCards[i].SetInput(enabled);
+            }
         }
     }
 }

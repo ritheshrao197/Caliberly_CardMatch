@@ -1,4 +1,5 @@
-using MemoryGame.Audio.Events;
+using System;
+using MemoryGame.Controller;
 using MemoryGame.Events;
 using MemoryGame.UI.Events;
 using UnityEngine;
@@ -87,9 +88,9 @@ namespace MemoryGame.Views
             if (levelSelectButton) 
                 levelSelectButton.onClick.AddListener(() => EventBus.Instance.Publish(new ShowLevelSelectEvent()));
             if (sfxButton) 
-                sfxButton.onClick.AddListener(() => EventBus.Instance.Publish(new ToggleSfxEvent()));
+                sfxButton.onClick.AddListener(() => EventBus.Instance.Publish(new OnClickToggleSfxEvent()));
             if (musicButton) 
-                musicButton.onClick.AddListener(() => EventBus.Instance.Publish(new ToggleMusicEvent()));
+                musicButton.onClick.AddListener(() => EventBus.Instance.Publish(new OnClickToggleMusicEvent()));
             if (exitButton) 
                 exitButton.onClick.AddListener(() => EventBus.Instance.Publish(new QuitEvent()));
         }
@@ -99,8 +100,9 @@ namespace MemoryGame.Views
         /// </summary>
         void OnEnable()
         {
-            AudioEvents.OnSfxEnabledChanged += OnSfxChanged;
-            AudioEvents.OnMusicEnabledChanged += OnMusicChanged;
+             EventBus.Instance.Subscribe<ToggleSfxEvent>(OnToggleSfx);
+            EventBus.Instance.Subscribe<ToggleMusicEvent>(OnToggleMusic);
+           
         }
         
         /// <summary>
@@ -108,10 +110,22 @@ namespace MemoryGame.Views
         /// </summary>
         void OnDisable()
         {
-            AudioEvents.OnSfxEnabledChanged -= OnSfxChanged;
-            AudioEvents.OnMusicEnabledChanged -= OnMusicChanged;
+            EventBus.Instance.Unsubscribe<ToggleSfxEvent>(OnToggleSfx);
+            EventBus.Instance.Unsubscribe<ToggleMusicEvent>(OnToggleMusic);
         }
-        
+
+        private void OnToggleSfx(ToggleSfxEvent evt)
+        {
+            if (sfxIcon) 
+                sfxIcon.sprite = evt.Enabled ? onSpriteSfx : offSpriteSfx;
+        }
+
+        private void OnToggleMusic(ToggleMusicEvent evt)
+        {
+            if (musicIcon) 
+                musicIcon.sprite = evt.Enabled ? onSpriteMusic : offSpriteMusic;
+        }
+
         /// <summary>
         /// Cleans up button click listeners when the component is destroyed
         /// </summary>

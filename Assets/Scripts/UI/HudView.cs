@@ -141,6 +141,7 @@ namespace MemoryGame.Views
         /// Handles the game won event by updating the status display
         /// </summary>
         private void OnGameWon(GameWonEvent evt) { 
+            Debug.Log("Game won!");
             if (statusText) 
                 statusText.text = "Level complete!"; 
         }
