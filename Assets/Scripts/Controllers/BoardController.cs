@@ -17,6 +17,9 @@ namespace MemoryGame.Controller
         private readonly ObjectPool<CardController> _pool;
         private readonly BoardFrame _frame;
         private readonly GameConfig _config;
+        private bool _oddGridInfoLogged;
+        private bool _frameFallbackWarned;
+        private bool _simpleLayoutWarned;
 
         public List<CardController> Cards { get; } = new List<CardController>();
 
@@ -43,10 +46,12 @@ namespace MemoryGame.Controller
             int usable = (totalSlots / 2) * 2;
             int pairs = usable / 2;
 
-            if (usable != totalSlots)
+            if (usable != totalSlots && !_oddGridInfoLogged)
             {
-                Debug.LogWarning(
-                    $"[BoardController] Odd grid {rows}x{cols}. Using {usable} cards.");
+                Debug.Log(
+                    $"[BoardController] Odd-sized grids use even card counts. " +
+                    $"Example {rows}x{cols} -> {usable} cards.");
+                _oddGridInfoLogged = true;
             }
 
             var ids = PickIds(pairs);
@@ -65,22 +70,37 @@ namespace MemoryGame.Controller
                 }
                 else
                 {
-                    Debug.LogWarning("Frame exists but bounds invalid. Falling back.");
-                    UseSimpleLayout(rows, cols, usable, ids);
+                    if (!_frameFallbackWarned)
+                    {
+                        Debug.LogWarning("[BoardController] Frame bounds invalid. Using simple grid fallback.");
+                        _frameFallbackWarned = true;
+                    }
+
+                    UseSimpleLayout(rows, cols, usable, ids, false);
                 }
             }
             else
             {
-                UseSimpleLayout(rows, cols, usable, ids);
+                UseSimpleLayout(rows, cols, usable, ids, true);
             }
 
 
             EventBus.Instance.Publish(new BoardBuiltEvent(pairs));
         }
 
-        private void UseSimpleLayout(int rows, int cols, int usable, List<string> ids)
+        private void UseSimpleLayout(
+            int rows,
+            int cols,
+            int usable,
+            List<string> ids,
+            bool warnIfNoFrame)
         {
-            Debug.LogWarning("[BoardController] No frame bounds found. Using simple grid layout.");
+            if (warnIfNoFrame && !_simpleLayoutWarned)
+            {
+                Debug.LogWarning("[BoardController] No frame configured. Using simple grid layout.");
+                _simpleLayoutWarned = true;
+            }
+
             float scale = CalculateCardScale(rows, cols);
 
             for (int i = 0; i < usable; i++)

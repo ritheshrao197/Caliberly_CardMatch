@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace MemoryGame.Views
 {
-    public class PausePopup : MonoBehaviour
+    public class PausePopup : UIPanel
     {
         [SerializeField] private Button resumeButton;
         [SerializeField] private Button restartButton;
@@ -13,8 +13,9 @@ namespace MemoryGame.Views
 
         private EventBus _bus;
 
-        private void Awake()
+        protected override void Awake()
         {
+            base.Awake();
             _bus = EventBus.Instance;
 
             if (resumeButton)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using MemoryGame.Events;
 using MemoryGame.UI.Events;
 using UnityEngine;
@@ -7,25 +8,51 @@ namespace MemoryGame.Views
 {
     public class UIManager : MonoBehaviour
     {
-        [Header("Main Panels")]
-        [SerializeField] private GameObject homePanel;
-        [SerializeField] private GameObject hudPanel;
+        public static UIManager Instance { get; private set; }
+        private static readonly PanelType[] PopupPanels =
+        {
+            PanelType.ResultPopup,
+            PanelType.PausePopup,
+            PanelType.LevelSelect
+        };
+
+        [Header("Panels")]
+        [SerializeField] private List<UIPanel> panels = new List<UIPanel>();
 
         [Header("Popup Canvas")]
         [SerializeField] private GameObject popupCanvasRoot;
-        [SerializeField] private GameObject resultPopup;
-        [SerializeField] private GameObject pausePopup;
-        [SerializeField] private GameObject levelSelectPanel;
+
+        [Header("Named Panels")]
+        [SerializeField] private PanelType homePanelName = PanelType.Home;
+        [SerializeField] private PanelType hudPanelName = PanelType.HUD;
+        [SerializeField] private PanelType resultPopupName = PanelType.ResultPopup;
+        [SerializeField] private PanelType pausePopupName = PanelType.PausePopup;
+        [SerializeField] private PanelType levelSelectPanelName = PanelType.LevelSelect;
+
+        private readonly Dictionary<PanelType, UIPanel> panelDictionary = new Dictionary<PanelType, UIPanel>();
+        private EventBus _bus;
+        private int _activePopupCount;
 
         private void Awake()
         {
+            if (Instance == null)
+            {
+                Instance = this;
+            }
+            else if (Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            InitializePanels();
             SetMainState(MainState.Home);
-            HideAllPopups();
         }
 
         private void OnEnable()
         {
-            var bus = EventBus.Instance;
+            _bus ??= EventBus.Instance;
+            var bus = _bus;
 
             bus.Subscribe<ShowLevelSelectEvent>(OnShowLevelSelect);
             bus.Subscribe<StartFromHomeEvent>(OnStartFromHome);
@@ -41,7 +68,10 @@ namespace MemoryGame.Views
 
         private void OnDisable()
         {
-            var bus = EventBus.Instance;
+            if (_bus == null)
+                return;
+
+            var bus = _bus;
 
             bus.Unsubscribe<ShowLevelSelectEvent>(OnShowLevelSelect);
             bus.Unsubscribe<StartFromHomeEvent>(OnStartFromHome);
@@ -65,16 +95,65 @@ namespace MemoryGame.Views
             HUD
         }
 
+        private void InitializePanels()
+        {
+            panelDictionary.Clear();
+            _activePopupCount = 0;
+
+            if (panels == null || panels.Count == 0)
+            {
+                panels = new List<UIPanel>(GetComponentsInChildren<UIPanel>(true));
+            }
+
+            foreach (var panel in panels)
+            {
+                if (panel == null)
+                    continue;
+
+                PanelType panelType = ResolvePanelType(panel);
+
+                if (panelDictionary.ContainsKey(panelType))
+                {
+                    Debug.LogWarning($"Duplicate panel type '{panelType}' found. Skipping duplicate.");
+                    continue;
+                }
+
+                panelDictionary.Add(panelType, panel);
+                panel.Hide();
+            }
+        }
+
+        public void OpenPanel(PanelType panelType)
+        {
+            SetPanelVisible(panelType, true);
+        }
+
+        public void ClosePanel(PanelType panelType)
+        {
+            SetPanelVisible(panelType, false);
+        }
+
+        public bool IsPanelOpen(PanelType panelType)
+        {
+            return panelDictionary.TryGetValue(panelType, out UIPanel panel) && panel.gameObject.activeSelf;
+        }
+
         private void SetMainState(MainState state)
         {
-            Debug.Log($"Switching main UI state to: {state}");
-            homePanel?.SetActive(state == MainState.Home);
-            hudPanel?.SetActive(state == MainState.HUD);
-            HideAllPopups();
+            if (state == MainState.Home)
+            {
+                OpenPanel(homePanelName);
+                ClosePanel(hudPanelName);
+            }
+            else
+            {
+                OpenPanel(hudPanelName);
+                ClosePanel(homePanelName);
+            }
 
+            CloseAllPopups(false);
 
-            if (state != MainState.HUD)
-                HideAllPopups();
+            RefreshPopupCanvas();
         }
 
         // ------------------------
@@ -84,7 +163,7 @@ namespace MemoryGame.Views
         private void ShowLevelSelect()
         {
             SetMainState(MainState.Home);
-            ShowPopup(levelSelectPanel);
+            ShowPopup(levelSelectPanelName);
         }
 
         private void OnShowLevelSelect(ShowLevelSelectEvent e) => ShowLevelSelect();
@@ -94,7 +173,7 @@ namespace MemoryGame.Views
         private void OnShowHud(OnShowHUDEvent e) => SetMainState(MainState.HUD);
         private void OnPause(OnPauseEvent e) => ShowPause();
         private void OnResume(OnResumeEvent e) => HidePause();
-        private void OnRestart(OnRestartEvent e) => HideAllPopups();
+        private void OnRestart(OnRestartEvent e) => CloseAllPopups();
         private void OnStartLevel(StartLevelEvent e) => SetMainState(MainState.HUD);
         private void OnShowResult(ShowResultEvent e) =>
             ShowResult(e.Win, e.LevelIndex, e.Reason, e.OnNext, e.OnHome);
@@ -103,13 +182,17 @@ namespace MemoryGame.Views
           bool win, int levelIndex, string reason, Action onNext, Action onHome)
         {
             SetMainState(MainState.Home);
-
-            if (resultPopup == null)
+            if (!TryGetPanel(resultPopupName, out UIPanel panel))
+            {
                 return;
+            }
 
-            var rp = resultPopup.GetComponent<ResultPopup>();
+            var rp = panel as ResultPopup;
             if (rp == null)
+            {
+                Debug.LogWarning($"Panel '{resultPopupName}' is not a ResultPopup.");
                 return;
+            }
 
             rp.Bind(
                 win,
@@ -117,50 +200,53 @@ namespace MemoryGame.Views
                 reason,
                 () =>
                 {
-                    HideAllPopups();
+                    CloseAllPopups();
                     onNext?.Invoke();
                     SetMainState(MainState.HUD);
                 },
                 () =>
                 {
-                    HideAllPopups();
+                    CloseAllPopups();
                     onHome?.Invoke();
                     SetMainState(MainState.Home);
                 });
 
-            ShowPopup(resultPopup);
+            ShowPopup(resultPopupName);
         }
 
         private void ShowPause()
         {
             InputLock.Lock();
-            ShowPopup(pausePopup);
+            ShowPopup(pausePopupName);
         }
 
         private void HidePause()
         {
-            Debug.Log("Resuming game from pause");
-            pausePopup?.SetActive(false);
+            SetPanelVisible(pausePopupName, false);
             InputLock.Unlock();
             RefreshPopupCanvas();
         }
 
-        private void ShowPopup(GameObject popup)
+        private void ShowPopup(PanelType panelType)
         {
-            if (popup == null)
-                return;
-
-            popup.SetActive(true);
+            SetPanelVisible(panelType, true);
             RefreshPopupCanvas();
         }
 
-        private void HideAllPopups()
+        private void CloseAllPopups(bool refresh = true)
         {
-            resultPopup?.SetActive(false);
-            pausePopup?.SetActive(false);
-            levelSelectPanel?.SetActive(false);
+            bool pauseWasOpen = IsPanelOpen(pausePopupName);
 
-            RefreshPopupCanvas();
+            for (int i = 0; i < PopupPanels.Length; i++)
+            {
+                SetPanelVisible(PopupPanels[i], false);
+            }
+
+            if (pauseWasOpen)
+                InputLock.Unlock();
+
+            if (refresh)
+                RefreshPopupCanvas();
         }
 
         private void RefreshPopupCanvas()
@@ -168,12 +254,69 @@ namespace MemoryGame.Views
             if (popupCanvasRoot == null)
                 return;
 
-            bool active =
-                (resultPopup?.activeSelf ?? false) ||
-                (pausePopup?.activeSelf ?? false) ||
-                (levelSelectPanel?.activeSelf ?? false) ;
+            popupCanvasRoot.SetActive(_activePopupCount > 0);
+        }
 
-            popupCanvasRoot.SetActive(active);
+        private bool TryGetPanel(PanelType panelType, out UIPanel panel)
+        {
+            if (panelDictionary.TryGetValue(panelType, out panel))
+                return true;
+
+            Debug.LogWarning($"Panel '{panelType}' not found.");
+            return false;
+        }
+
+        private void SetPanelVisible(PanelType panelType, bool visible)
+        {
+            if (!TryGetPanel(panelType, out UIPanel panel))
+                return;
+
+            bool isActive = panel.gameObject.activeSelf;
+            if (isActive == visible)
+                return;
+
+            if (visible)
+                panel.Show();
+            else
+                panel.Hide();
+
+            if (IsPopupPanel(panelType))
+            {
+                _activePopupCount += visible ? 1 : -1;
+                if (_activePopupCount < 0)
+                    _activePopupCount = 0;
+            }
+        }
+
+        private static bool IsPopupPanel(PanelType panelType)
+        {
+            for (int i = 0; i < PopupPanels.Length; i++)
+            {
+                if (PopupPanels[i] == panelType)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static PanelType ResolvePanelType(UIPanel panel)
+        {
+            if (panel is HomeView)
+                return PanelType.Home;
+
+            if (panel is HudView)
+                return PanelType.HUD;
+
+            if (panel is ResultPopup)
+                return PanelType.ResultPopup;
+
+            if (panel is PausePopup)
+                return PanelType.PausePopup;
+
+            if (panel is LevelSelectionView)
+                return PanelType.LevelSelect;
+
+            return panel.PanelType;
         }
     }
 }

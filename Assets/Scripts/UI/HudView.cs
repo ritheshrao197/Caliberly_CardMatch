@@ -9,7 +9,7 @@ namespace MemoryGame.Views
     /// View component for the HUD (Heads-Up Display) in the Memory Game.
     /// Displays level information, timer, move count, and game status.
     /// </summary>  
-    public class HudView : MonoBehaviour
+    public class HudView : UIPanel
     {
         /// <summary>
         /// Text component to display the current level information
@@ -39,8 +39,9 @@ namespace MemoryGame.Views
         /// <summary>
         /// Initializes the component, finds the timer service, and registers game event handlers
         /// </summary>
-        private void Awake()
+        protected override void Awake()
         {
+            base.Awake();
             _timer = FindObjectOfType<TimerService>();
             EventBus.Instance.Subscribe<LevelStartedEvent>(OnLevelStarted);
             EventBus.Instance.Subscribe<PairMatchedEvent>(OnPairEvent);

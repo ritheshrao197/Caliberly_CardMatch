@@ -9,7 +9,7 @@ namespace MemoryGame.Views
     /// View component for the result popup that appears when a level is completed or failed.
     /// Displays appropriate messages and handles user actions for proceeding to the next level or retrying.
     /// </summary>
-    public class ResultPopup : MonoBehaviour
+    public class ResultPopup : UIPanel
     {
         /// <summary>
         /// Text component for the popup title

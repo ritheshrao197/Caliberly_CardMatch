@@ -18,6 +18,7 @@ namespace MemoryGame.Controller
         [Tooltip("Optional explicit reference; defaults to SpriteRenderer on this GameObject")]
         public SpriteRenderer frame;
         [SerializeField] GameConfig _cfg;
+        private bool _missingSpriteWarned;
 
         // 
 
@@ -36,7 +37,19 @@ namespace MemoryGame.Controller
         {
             // Use explicit frame if set, otherwise get SpriteRenderer on this GameObject
             var sr = frame == null ? GetComponent<SpriteRenderer>() : frame;
-            if (sr == null || sr.sprite == null) { inner = default; return false; }
+            if (sr == null || sr.sprite == null)
+            {
+                if (!_missingSpriteWarned)
+                {
+                    Debug.LogWarning(
+                        $"[BoardFrame] Missing SpriteRenderer sprite on '{name}'. Using simple grid fallback.");
+                    _missingSpriteWarned = true;
+                }
+
+                inner = default;
+                return false;
+            }
+
             var b = sr.bounds;
             float padX =BoardConstants.DefaultInnerPadding  * b.size.x;
             float padY = BoardConstants.DefaultInnerPadding * b.size.y;

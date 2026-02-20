@@ -11,7 +11,7 @@ namespace MemoryGame.Views
     /// View component for the Home screen of the Memory Game.
     /// Handles binding UI button clicks to game events and updating audio icons.
     /// </summary>
-    public class HomeView : MonoBehaviour
+    public class HomeView : UIPanel
     {
         /// <summary>
         /// Button to start the game from the home screen
@@ -79,8 +79,10 @@ namespace MemoryGame.Views
         /// <summary>
         /// Initializes the component and binds button click events to UI events
         /// </summary>
-        void Awake()
+        protected override void Awake()
         {
+            base.Awake();
+
             if (startButton) 
                 startButton.onClick.AddListener(() => EventBus.Instance.Publish(new StartFromHomeEvent()));
             if (resetProgressButton) 

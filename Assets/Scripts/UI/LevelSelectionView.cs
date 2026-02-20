@@ -11,7 +11,7 @@ namespace MemoryGame.Views
     /// View component for the level selection screen.
     /// Dynamically creates level buttons based on available levels and handles level selection.
     /// </summary>
-    public class LevelSelectionView : MonoBehaviour
+    public class LevelSelectionView : UIPanel
     {
         /// <summary>
         /// Container for the level buttons
@@ -38,8 +38,9 @@ namespace MemoryGame.Views
         /// <summary>
         /// Initializes the component, builds the level buttons, and sets up the close button
         /// </summary>
-        void Awake()
+        protected override void Awake()
         {
+            base.Awake();
             Build();
             if (closeButton) 
                 closeButton.onClick.AddListener(() => EventBus.Instance.Publish(new OnHideLevelSelectEvent()));
