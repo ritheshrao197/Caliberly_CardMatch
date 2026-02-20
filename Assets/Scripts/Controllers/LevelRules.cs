@@ -1,6 +1,7 @@
 using System.Collections;
 using MemoryGame.Controller;
 using MemoryGame.Events;
+using MemoryGame.Services;
 using UnityEngine;
 
 namespace MemoryGame
@@ -80,7 +81,7 @@ namespace MemoryGame
 
         private IEnumerator EvaluateMoveLimitAfterMatch()
         {
-            // MatchService raises GameWon after PairMatched in the same frame.
+            // MatchResolver raises GameWon after PairMatched in the same frame.
             // Defer check so win state can settle first.
             yield return null;
 

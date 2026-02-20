@@ -1,5 +1,6 @@
 using MemoryGame.Controller;
 using MemoryGame.Events;
+using MemoryGame.Services;
 using TMPro;
 using UnityEngine;
 
@@ -31,10 +32,13 @@ namespace MemoryGame.Views
         /// </summary>
         public TextMeshProUGUI statusText;
 
+        private EventBus _bus;
         private int _moves;
         private int _moveLimit;
         private float _timeLimit;
         private TimerService _timer;
+        private int _lastTimerSecond = -1;
+        private string _timeLimitFormatted;
 
         /// <summary>
         /// Initializes the component, finds the timer service, and registers game event handlers
@@ -42,26 +46,37 @@ namespace MemoryGame.Views
         protected override void Awake()
         {
             base.Awake();
+            _bus = EventBus.Instance;
             _timer = FindObjectOfType<TimerService>();
-            EventBus.Instance.Subscribe<LevelStartedEvent>(OnLevelStarted);
-            EventBus.Instance.Subscribe<PairMatchedEvent>(OnPairEvent);
-            EventBus.Instance.Subscribe<PairMismatchedEvent>(OnPairEvent);
-            EventBus.Instance.Subscribe<RemainingPairsChangedEvent>(OnRemainingPairsChanged);
-            EventBus.Instance.Subscribe<GameWonEvent>(OnGameWon);
-            EventBus.Instance.Subscribe<GameLostEvent>(OnGameLost);
+        }
+
+        private void OnEnable()
+        {
+            if (_bus == null)
+                _bus = EventBus.Instance;
+
+            _bus.Subscribe<LevelStartedEvent>(OnLevelStarted);
+            _bus.Subscribe<PairMatchedEvent>(OnPairEvent);
+            _bus.Subscribe<PairMismatchedEvent>(OnPairEvent);
+            _bus.Subscribe<RemainingPairsChangedEvent>(OnRemainingPairsChanged);
+            _bus.Subscribe<GameWonEvent>(OnGameWon);
+            _bus.Subscribe<GameLostEvent>(OnGameLost);
         }
         
         /// <summary>
         /// Unregisters game event handlers when the component is destroyed
         /// </summary>
-        private void OnDestroy()
+        private void OnDisable()
         {
-            EventBus.Instance.Unsubscribe<LevelStartedEvent>(OnLevelStarted);
-            EventBus.Instance.Unsubscribe<PairMatchedEvent>(OnPairEvent);
-            EventBus.Instance.Unsubscribe<PairMismatchedEvent>(OnPairEvent);
-            EventBus.Instance.Unsubscribe<RemainingPairsChangedEvent>(OnRemainingPairsChanged);
-            EventBus.Instance.Unsubscribe<GameWonEvent>(OnGameWon);
-            EventBus.Instance.Unsubscribe<GameLostEvent>(OnGameLost);
+            if (_bus == null)
+                return;
+
+            _bus.Unsubscribe<LevelStartedEvent>(OnLevelStarted);
+            _bus.Unsubscribe<PairMatchedEvent>(OnPairEvent);
+            _bus.Unsubscribe<PairMismatchedEvent>(OnPairEvent);
+            _bus.Unsubscribe<RemainingPairsChangedEvent>(OnRemainingPairsChanged);
+            _bus.Unsubscribe<GameWonEvent>(OnGameWon);
+            _bus.Unsubscribe<GameLostEvent>(OnGameLost);
         }
 
         /// <summary>
@@ -69,13 +84,19 @@ namespace MemoryGame.Views
         /// </summary>
         private void Update()
         {
-            if (_timer != null && timerText != null)
-            {
-                var t = Mathf.Max(0f, _timer.elapsed);
-                int m = (int)(t / 60f);
-                int s = (int)(t % 60f);
-                timerText.text = _timeLimit > 0f ? $"{m:00}:{s:00} / {FormatTime(_timeLimit)}" : $"{m:00}:{s:00}";
-            }
+            if (_timer == null || timerText == null)
+                return;
+
+            int elapsedSeconds = Mathf.Max(0, Mathf.FloorToInt(_timer.elapsed));
+            if (elapsedSeconds == _lastTimerSecond)
+                return;
+
+            _lastTimerSecond = elapsedSeconds;
+            int m = elapsedSeconds / 60;
+            int s = elapsedSeconds % 60;
+            timerText.text = _timeLimit > 0f
+                ? $"{m:00}:{s:00} / {_timeLimitFormatted}"
+                : $"{m:00}:{s:00}";
         }
 
         /// <summary>
@@ -104,6 +125,8 @@ namespace MemoryGame.Views
             _moves = 0;
             _moveLimit = def.moveLimit;
             _timeLimit = def.timeLimitSec;
+            _timeLimitFormatted = _timeLimit > 0f ? FormatTime(_timeLimit) : string.Empty;
+            _lastTimerSecond = -1;
             if (levelText) 
                 levelText.text = $"Level {idx + 1}: {def.rows}x{def.cols}";
             if (movesText) 
@@ -142,7 +165,6 @@ namespace MemoryGame.Views
         /// Handles the game won event by updating the status display
         /// </summary>
         private void OnGameWon(GameWonEvent evt) { 
-            Debug.Log("Game won!");
             if (statusText) 
                 statusText.text = "Level complete!"; 
         }

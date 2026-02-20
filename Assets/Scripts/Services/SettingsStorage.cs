@@ -29,6 +29,9 @@ namespace MemoryGame.Services
         public static void SetSfxEnabled(bool enabled)
         {
             var data = Load();
+            if (data.sfxEnabled == enabled)
+                return;
+
             data.sfxEnabled = enabled;
             Save(data);
         }
@@ -41,6 +44,9 @@ namespace MemoryGame.Services
         public static void SetMusicEnabled(bool enabled)
         {
             var data = Load();
+            if (data.musicEnabled == enabled)
+                return;
+
             data.musicEnabled = enabled;
             Save(data);
         }
@@ -53,13 +59,20 @@ namespace MemoryGame.Services
         public static void SetHighestLevelIndex(int index)
         {
             var data = Load();
-            data.highestLevelIndex = Mathf.Max(0, index);
+            int clampedIndex = Mathf.Max(0, index);
+            if (data.highestLevelIndex == clampedIndex)
+                return;
+
+            data.highestLevelIndex = clampedIndex;
             Save(data);
         }
 
         public static void ResetProgress()
         {
             var data = Load();
+            if (data.highestLevelIndex == 0)
+                return;
+
             data.highestLevelIndex = 0;
             Save(data);
         }
@@ -109,7 +122,7 @@ namespace MemoryGame.Services
                     if (!string.IsNullOrEmpty(folder) && !Directory.Exists(folder))
                         Directory.CreateDirectory(folder);
 
-                    var json = JsonUtility.ToJson(_cache, true);
+                    var json = JsonUtility.ToJson(_cache, false);
                     File.WriteAllText(_path, json);
                 }
                 catch (Exception ex)

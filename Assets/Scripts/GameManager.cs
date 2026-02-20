@@ -1,21 +1,18 @@
-using System;
+using MemoryGame.Runtime;
 using MemoryGame.Config;
 using MemoryGame.Controller;
 using MemoryGame.Events;
 using MemoryGame.Services;
 using MemoryGame.UI.Events;
 using UnityEngine;
-using UnityEngine.Pool;
 
 namespace MemoryGame
 {
     /// <summary>
-    /// Orchestrates level lifecycle, board creation, and high-level game commands.
+    /// Thin composition root that wires runtime collaborators for gameplay flow.
     /// </summary>
     public class GameManager : MonoBehaviour
     {
-        public static GameManager Instance { get; private set; }
-
         [Header("Data")]
         public GameConfig config;
         public CardSet cardSet;
@@ -24,161 +21,76 @@ namespace MemoryGame
         [Header("Scene Refs")]
         public Transform boardRoot;
         public CardController cardPrefab;
-        public MatchService matchService;
+        public MatchResolver matchResolver;
         public TimerService timerService;
         public LevelRules levelRules;
-        public ProgressService progress;
+        [Tooltip("Assign any MonoBehaviour implementing IProgressTracker (e.g., ProgressService).")]
+        public MonoBehaviour progressTracker;
         public BoardFrame frame;
 
-        private BoardController _board;
-        private ObjectPool<CardController> _pool;
-        private int _levelIndex;
+        private BoardRuntime _boardRuntime;
+        private LevelSessionController _levelSession;
+        private GameFlowCoordinator _gameFlowCoordinator;
+        private IProgressTracker _progressTracker;
 
-        private EventBus Bus => EventBus.Instance;
-
-        private void Awake()
+        private void Start()
         {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
+            if (!ValidateSetup())
                 return;
-            }
 
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-
-        private void OnEnable()
-        {
-            Bus.Subscribe<StartFromHomeEvent>(CmdStartFromHome);
-            Bus.Subscribe<StartLevelEvent>(CmdStartLevel);
-            Bus.Subscribe<OnRestartEvent>(CmdRestart);
-            Bus.Subscribe<OnGoHomeEvent>(CmdGoHome);
-            Bus.Subscribe<OnPauseEvent>(CmdPause);
-            Bus.Subscribe<OnResumeEvent>(CmdResume);
-            Bus.Subscribe<ResetProgressEvent>(CmdResetProgress);
-            Bus.Subscribe<GameWonEvent>(OnGameWon);
-            Bus.Subscribe<GameLostEvent>(OnGameLost);
+            ComposeRuntime();
+            _gameFlowCoordinator.Enable();
+            EventBus.Instance.Publish(new OnGoHomeEvent());
         }
 
         private void OnDisable()
         {
-            Bus.Unsubscribe<StartFromHomeEvent>(CmdStartFromHome);
-            Bus.Unsubscribe<StartLevelEvent>(CmdStartLevel);
-            Bus.Unsubscribe<OnRestartEvent>(CmdRestart);
-            Bus.Unsubscribe<OnGoHomeEvent>(CmdGoHome);
-            Bus.Unsubscribe<OnPauseEvent>(CmdPause);
-            Bus.Unsubscribe<OnResumeEvent>(CmdResume);
-            Bus.Unsubscribe<ResetProgressEvent>(CmdResetProgress);
-            Bus.Unsubscribe<GameWonEvent>(OnGameWon);
-            Bus.Unsubscribe<GameLostEvent>(OnGameLost);
+            _gameFlowCoordinator?.Disable();
         }
 
-        private void Start()
+        private bool ValidateSetup()
         {
-            ValidateSetup();
+            if (matchResolver == null)
+                matchResolver = FindObjectOfType<MatchResolver>();
 
-            _pool = new ObjectPool<CardController>(cardPrefab, boardRoot, 0);
-            _board = new BoardController(boardRoot, cardSet, _pool, frame, config);
-
-            _levelIndex = progress ? progress.GetCurrentLevelIndex() : 0;
-
-            Bus.Publish(new OnGoHomeEvent());
-        }
-
-        private void ValidateSetup()
-        {
-            if (!config || !cardSet || !boardRoot || !cardPrefab || !levelConfig)
+            if (!config || !cardSet || !boardRoot || !cardPrefab || !levelConfig || !matchResolver)
+            {
                 Debug.LogError("GameManager: Missing required references.");
+                return false;
+            }
+
+            if (progressTracker == null)
+            {
+                Debug.LogError("GameManager: Missing progress tracker reference.");
+                return false;
+            }
+
+            _progressTracker = progressTracker as IProgressTracker;
+            if (_progressTracker == null)
+            {
+                Debug.LogError($"GameManager: Assigned progress tracker does not implement {nameof(IProgressTracker)}.");
+                return false;
+            }
+
+            return true;
         }
 
-        private void StartLevel(int index)
+        private void ComposeRuntime()
         {
-            if (index < 0 || index >= levelConfig.levels.Count)
-                index = 0;
+            if (GetComponent<ScoreTracker>() == null)
+                gameObject.AddComponent<ScoreTracker>();
 
-            _levelIndex = index;
-            var def = levelConfig.levels[_levelIndex];
+            _boardRuntime = new BoardRuntime(boardRoot, cardSet, cardPrefab, frame, config);
+            _levelSession = new LevelSessionController(
+                levelConfig,
+                config,
+                _boardRuntime,
+                matchResolver,
+                timerService,
+                levelRules,
+                EventBus.Instance);
 
-            if (def.flipDuration > 0)
-                config.flipDuration = def.flipDuration;
-
-            if (def.mismatchHideDelay > 0)
-                config.mismatchHideDelay = def.mismatchHideDelay;
-
-            _board.Build(def.rows, def.cols);
-
-            matchService?.RegisterCards(_board.Cards);
-
-            timerService?.ResetTimer();
-            timerService?.StartTimer();
-
-            levelRules?.BeginLevel(def, _levelIndex, timerService);
-
-            Bus.Publish(new LevelStartedEvent(def, _levelIndex));
-        }
-
-        private void OnGameWon(GameWonEvent e)
-        {
-            progress?.UnlockNextLevel(_levelIndex);
-            Bus.Publish(new LevelCompletedEvent(_levelIndex));
-            Bus.Publish(new ShowResultEvent(
-                true,
-                _levelIndex,
-                null,
-                () => StartLevel(_levelIndex + 1),
-                () => Bus.Publish(new OnGoHomeEvent())
-            ));
-        }
-
-        private void OnGameLost(GameLostEvent e)
-        {
-            Bus.Publish(new ShowResultEvent(
-                false,
-                _levelIndex,
-                e.Reason,
-                () => StartLevel(_levelIndex),
-                () => Bus.Publish(new OnGoHomeEvent())
-            ));
-        }
-
-        private void CmdStartFromHome(StartFromHomeEvent e)
-        {
-            StartLevel(progress ? progress.GetCurrentLevelIndex() : 0);
-            Bus.Publish(new OnShowHUDEvent());
-        }
-
-        private void CmdStartLevel(StartLevelEvent e)
-        {
-            StartLevel(e.LevelIndex);
-            Bus.Publish(new OnShowHUDEvent());
-        }
-
-        private void CmdRestart(OnRestartEvent e)
-        {
-            StartLevel(_levelIndex);
-        }
-
-    
-
-        private void CmdGoHome(OnGoHomeEvent e)
-        {
-            timerService?.StopTimer();
-        }
-
-        private void CmdPause(OnPauseEvent e)
-        {
-            timerService?.StopTimer();
-        }
-
-        private void CmdResume(OnResumeEvent e)
-        {
-            timerService?.StartTimer();
-        }
-
-        private void CmdResetProgress(ResetProgressEvent e)
-        {
-            progress?.ResetProgress();
+            _gameFlowCoordinator = new GameFlowCoordinator(EventBus.Instance, _levelSession, _progressTracker);
         }
     }
 }

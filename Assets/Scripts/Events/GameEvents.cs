@@ -140,4 +140,19 @@ namespace MemoryGame.Events
             OnHome = onHome;
         }
     }
+
+    /// <summary>
+    /// Fired when score/combo values change.
+    /// </summary>
+    public struct ScoreChangedEvent : IEvent
+    {
+        public int Score;
+        public int Combo;
+
+        public ScoreChangedEvent(int score, int combo)
+        {
+            Score = score;
+            Combo = combo;
+        }
+    }
 }

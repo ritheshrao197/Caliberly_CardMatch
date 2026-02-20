@@ -1,13 +1,12 @@
 using UnityEngine;
-using MemoryGame.Services;
 
-namespace MemoryGame
+namespace MemoryGame.Services
 {
     /// <summary>
     /// Service to manage player progress and level unlocking.
     /// Uses JSON storage to persistently store the highest level completed by the player.
     /// </summary>
-    public class ProgressService : MonoBehaviour
+    public class ProgressService : MonoBehaviour, IProgressTracker
     {
         /// <summary>
         /// Gets the current level index the player should start at.
