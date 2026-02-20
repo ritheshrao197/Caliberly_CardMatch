@@ -1,6 +1,7 @@
 using UnityEngine;
 using MemoryGame.Constants;
 using MemoryGame.Events;
+using MemoryGame.Services;
 using MemoryGame.UI.Events;
 
 namespace MemoryGame.Controller
@@ -41,9 +42,6 @@ namespace MemoryGame.Controller
         private bool _sfxEnabled;
         private bool _musicEnabled;
 
-        private const string KEY_SFX = AudioConstants.SfxEnabledKey;
-        private const string KEY_MUSIC = AudioConstants.MusicEnabledKey;
-
         #region Unity Lifecycle
 
         private void Awake()
@@ -83,8 +81,11 @@ namespace MemoryGame.Controller
 
         private void LoadPreferences()
         {
-            _sfxEnabled = PlayerPrefs.GetInt(KEY_SFX, 1) == 1;
-            _musicEnabled = PlayerPrefs.GetInt(KEY_MUSIC, 1) == 1;
+            _sfxEnabled = SettingsStorage.GetSfxEnabled();
+            _musicEnabled = SettingsStorage.GetMusicEnabled();
+            EventBus.Instance.Publish(new ToggleSfxEvent(_sfxEnabled));
+            EventBus.Instance.Publish(new ToggleMusicEvent(_musicEnabled));
+
         }
 
         private void InitializeMusic()
@@ -192,8 +193,7 @@ namespace MemoryGame.Controller
         private void ToggleSfx()
         {
             _sfxEnabled = !_sfxEnabled;
-            PlayerPrefs.SetInt(KEY_SFX, _sfxEnabled ? 1 : 0);
-            PlayerPrefs.Save();
+            SettingsStorage.SetSfxEnabled(_sfxEnabled);
             EventBus.Instance.Publish(new ToggleSfxEvent(_sfxEnabled));
         }
         /// <summary>
@@ -202,8 +202,7 @@ namespace MemoryGame.Controller
         private void ToggleMusic()
         {
             _musicEnabled = !_musicEnabled;
-            PlayerPrefs.SetInt(KEY_MUSIC, _musicEnabled ? 1 : 0);
-            PlayerPrefs.Save();
+            SettingsStorage.SetMusicEnabled(_musicEnabled);
 
             if (_musicEnabled)
             {
