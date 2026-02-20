@@ -1,7 +1,6 @@
 using System.Collections;
 using UnityEngine;
 using MemoryGame.Constants;
-using MemoryGame.Config;
 
 namespace MemoryGame.Views
 {
@@ -11,9 +10,6 @@ namespace MemoryGame.Views
     /// </summary>
     public class CardView : MonoBehaviour
     {
-
-        [SerializeField] private GameConfig confg;
-
         /// <summary>
         /// Renderer for the card's face (front side)
         /// </summary>

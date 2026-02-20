@@ -3,7 +3,6 @@ using MemoryGame.Events;
 using MemoryGame.Models;
 using MemoryGame.Views;
 using UnityEngine;
-using MemoryGame.Constants;
 
 namespace MemoryGame.Controller
 {
@@ -27,6 +26,7 @@ namespace MemoryGame.Controller
 
         private readonly CardModel _model = new CardModel();
         private bool _inputEnabled = true;
+        private bool _isAnimating;
         private Coroutine _unlockRoutine;
 
         /// <summary>
@@ -56,6 +56,7 @@ namespace MemoryGame.Controller
             }
             gameObject.SetActive(true);
             _inputEnabled = true;
+            _isAnimating = false;
 
             int lockRevision = InputLock.Lock();
             if (_unlockRoutine != null)
@@ -70,7 +71,7 @@ namespace MemoryGame.Controller
         {
             // Debug.Log($"[CardController] OnMouseUpAsButton called for card {_model.Id}");
             // Debug.Log($"[CardController] _inputEnabled={_inputEnabled}, IsMatched={_model.IsMatched}, IsFaceUp={_model.IsFaceUp}");
-            if (InputLock.IsLocked || !_inputEnabled || _model.IsMatched || _model.IsFaceUp) return;
+            if (InputLock.IsLocked || !_inputEnabled || _isAnimating || _model.IsMatched || _model.IsFaceUp) return;
             StartCoroutine(FlipRoutine(true));
             EventBus.Instance.Publish(new CardSelectedEvent(this));
         }
@@ -88,8 +89,15 @@ namespace MemoryGame.Controller
         /// <returns>IEnumerator for coroutine execution</returns>
         public IEnumerator FlipRoutine(bool faceUp)
         {
-            yield return view.StartCoroutine(view.AnimateFlip(faceUp, flipDuration));
+            _isAnimating = true;
+
+            if (view != null)
+                yield return view.StartCoroutine(view.AnimateFlip(faceUp, flipDuration));
+            else
+                yield return null;
+
             if (faceUp) _model.FlipUp(); else _model.FlipDown();
+            _isAnimating = false;
         }
 
         /// <summary>

@@ -1,4 +1,3 @@
-using MemoryGame.Controller;
 using MemoryGame.Events;
 using MemoryGame.Services;
 using TMPro;

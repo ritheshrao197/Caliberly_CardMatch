@@ -18,12 +18,12 @@ namespace MemoryGame.Services
 
         private CardController _first;
         private CardController _second;
-
-        private bool _busy;
         private int _remainingPairs;
 
-        private readonly List<CardController> _allCards = new();
+        private readonly Queue<CardController> _selectionQueue = new();
+        private readonly HashSet<CardController> _pendingCards = new();
         private EventBus _bus;
+        private Coroutine _resolveRoutine;
 
         private WaitForSeconds _resolveDelay;
         private WaitForSeconds _mismatchDelay;
@@ -64,56 +64,73 @@ namespace MemoryGame.Services
 
             _first = null;
             _second = null;
-            _busy = false;
+            _selectionQueue.Clear();
+            _pendingCards.Clear();
+
+            if (_resolveRoutine != null)
+            {
+                StopCoroutine(_resolveRoutine);
+                _resolveRoutine = null;
+            }
         }
 
         public void RegisterCards(IEnumerable<CardController> cards)
         {
-            _allCards.Clear();
-
-            if (cards == null)
-                return;
-
-            _allCards.AddRange(cards);
+            _ = cards;
+            _selectionQueue.Clear();
+            _pendingCards.Clear();
         }
 
         private void OnCardSelected(CardSelectedEvent e)
         {
-            if (_busy || e.Card == null)
+            if (e.Card == null || e.Card.Model.IsMatched)
                 return;
 
-            if (_first == null)
-            {
-                _first = e.Card;
-                return;
-            }
-
-            if (e.Card == _first)
+            if (!_pendingCards.Add(e.Card))
                 return;
 
-            _second = e.Card;
-            StartCoroutine(ResolvePair());
+            _selectionQueue.Enqueue(e.Card);
+
+            if (_resolveRoutine == null)
+                _resolveRoutine = StartCoroutine(ProcessQueue());
         }
 
-        private IEnumerator ResolvePair()
+        private IEnumerator ProcessQueue()
         {
-            _busy = true;
-            SetAllInput(false);
-
-            yield return _resolveDelay;
-
-            bool isMatch = _first.Model.Id == _second.Model.Id;
-
-            if (isMatch)
+            while (_remainingPairs > 0)
             {
-                HandleMatch();
-            }
-            else
-            {
-                yield return HandleMismatch();
+                if (_selectionQueue.Count < 2)
+                    break;
+
+                _first = _selectionQueue.Dequeue();
+                _second = _selectionQueue.Dequeue();
+
+                if (_first == null || _second == null || _first == _second)
+                {
+                    ClearPending(_first);
+                    ClearPending(_second);
+                    _first = null;
+                    _second = null;
+                    continue;
+                }
+
+                yield return _resolveDelay;
+
+                bool isMatch = _first.Model.Id == _second.Model.Id;
+
+                if (isMatch)
+                {
+                    HandleMatch();
+                }
+                else
+                {
+                    yield return HandleMismatch();
+                }
+
+                ResetSelection();
             }
 
-            ResetSelection();
+            _resolveRoutine = null;
         }
 
         private void HandleMatch()
@@ -141,22 +158,17 @@ namespace MemoryGame.Services
 
         private void ResetSelection()
         {
+            ClearPending(_first);
+            ClearPending(_second);
+
             _first = null;
             _second = null;
-
-            _busy = false;
-
-            if (_remainingPairs > 0)
-                SetAllInput(true);
         }
 
-        private void SetAllInput(bool enabled)
+        private void ClearPending(CardController card)
         {
-            for (int i = 0; i < _allCards.Count; i++)
-            {
-                if (_allCards[i] != null)
-                    _allCards[i].SetInput(enabled);
-            }
+            if (card != null)
+                _pendingCards.Remove(card);
         }
     }
 }
